@@ -14,6 +14,7 @@ import {
   Search,
   User,
   WifiOff,
+  Shuffle,
   CloudOff,
   RefreshCw,
 } from "lucide-react";
@@ -24,13 +25,14 @@ import { apiHealth } from "@/lib/api/client";
 import { useOnline } from "@/lib/platform/useOnline";
 import { useUser } from "@/lib/store/user";
 import { updateReady, applyUpdate } from "./pwa";
+import { SURPRISE_EVENT } from "@/lib/events";
 
 const NAV = [
-  { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/", label: "Home", icon: Home, end: true, fill: true },
   { to: "/discover", label: "Discover", icon: Compass },
   { to: "/search", label: "Search", icon: Search },
-  { to: "/library", label: "Library", icon: BookOpen },
-  { to: "/profile", label: "Profile", icon: User },
+  { to: "/library", label: "My Series", icon: BookOpen, fill: true },
+  { to: "/profile", label: "Profile", icon: User, fill: true },
 ];
 
 function useApiHealth() {
@@ -77,8 +79,10 @@ export function Shell() {
   const inSearch = loc.pathname.startsWith("/search");
   // Title pages bring their own header and sticky read button on phones (blueprint), so the shell steps aside there.
   const immersive = loc.pathname.startsWith("/title/");
+  // Blueprint Search and My Series open on their own large title, with no logo bar above (phones).
+  const bare = inSearch || loc.pathname.startsWith("/library");
   return (
-    <div className="shell" data-own-chrome={immersive || undefined}>
+    <div className="shell" data-own-chrome={immersive || undefined} data-bare={bare || undefined}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -145,6 +149,16 @@ export function Shell() {
               <kbd>/</kbd>
             </button>
           )}
+          {loc.pathname === "/" && (
+            <button className="surprise" onClick={() => window.dispatchEvent(new Event(SURPRISE_EVENT))} aria-label="Surprise me: open a random pick">
+              <span className="surprise-bubble" aria-hidden="true">
+                Surprise me
+              </span>
+              <span className="surprise-ico" aria-hidden="true">
+                <Shuffle size={24} strokeWidth={1.8} />
+              </span>
+            </button>
+          )}
           {profile && (
             <NavLink
               to="/profile"
@@ -195,10 +209,10 @@ export function Shell() {
         )}
       </div>
       <nav className="bottomnav" aria-label="Primary">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.map(({ to, label, icon: Icon, end, fill }) => (
           <NavLink key={to} to={to} end={end}>
             <span className="nav-ico">
-              <Icon size={21} strokeWidth={2} />
+              <Icon size={23} strokeWidth={1.7} className={fill ? "fillable" : undefined} />
             </span>
             {label}
           </NavLink>

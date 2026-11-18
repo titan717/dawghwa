@@ -4,7 +4,7 @@ import { expect, type BrowserContext, type Page } from "@playwright/test";
 export async function skipOnboarding(page: Page) {
   await page.goto("/");
   await expect(page).toHaveURL(/\/welcome/);
-  await page.getByRole("button", { name: "Skip" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page).toHaveURL(/\/$/);
 }
 

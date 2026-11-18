@@ -2,9 +2,10 @@ import { memo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Star } from "lucide-react";
 import { prefetchTitle } from "@/lib/query";
-import { compactNumber, kindLabel, titlePath, type Title, isMature } from "@/lib/titles";
+import { kindLabel, titlePath, type Title, isMature } from "@/lib/titles";
 import { Cover } from "./Cover";
 import { TitleActionsSheet } from "./TitleActions";
+import { useUser } from "@/lib/store/user";
 
 export interface CardProps {
   title: Title;
@@ -14,6 +15,10 @@ export interface CardProps {
   eager?: boolean;
   progress?: { label: string; fraction: number };
   variant?: "card" | "ranked";
+  /** Blueprint green sublabel under the cover (reason, rank or genre). */
+  sub?: string;
+  /** Blueprint green corner badge, only when real data backs it (e.g. unread chapters). */
+  badge?: string;
 }
 
 function useLongPress(onLong: () => void) {
@@ -47,8 +52,16 @@ function useLongPress(onLong: () => void) {
   };
 }
 
-export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card" }: CardProps) {
+export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card", sub, badge }: CardProps) {
   const [menu, setMenu] = useState(false);
+  // 2 = every known chapter read, 1 = started and newer chapters exist (real local progress only)
+  const readState = useUser((s) => {
+    const p = s.progress.get(t.key);
+    if (!p || !t.latestChapter || !p.maxReadNumber) return 0;
+    return p.maxReadNumber >= t.latestChapter ? 2 : 1;
+  });
+  const cornerBadge = badge ?? (readState === 1 ? "New Chapter" : undefined);
+  const line = readState === 2 ? "✓ All read" : (sub ?? reason);
   const press = useLongPress(() => setMenu(true));
   const meta = [kindLabel(t.meta?.kind), t.latestChapter ? `Ch. ${t.latestChapter}` : undefined].filter(Boolean);
   const href = titlePath(t);
@@ -83,7 +96,7 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
         <MoreHorizontal size={18} />
       </button>
       <Link to={href} className="card-link" onMouseEnter={() => prefetchTitle(t)} onFocus={() => prefetchTitle(t)} {...press}>
-        {t.meta?.status === "completed" && <span className="card-badge sticker sticker-lavender">Done</span>}
+        {cornerBadge && <span className="card-badge new-badge">{cornerBadge}</span>}
         <Cover mature={isMature(t)} src={t.cover} large={t.coverLarge} title={t.title} eager={eager} />
         {progress && (
           <div className="progress-bar" aria-label={progress.label}>
@@ -92,14 +105,9 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
         )}
         <span className="card-title">{t.title}</span>
       </Link>
-      {reason ? (
-        <span className="card-reason">{reason}</span>
-      ) : (
-        <span className="card-meta">
-          {meta.map((m) => (
-            <span key={m}>{m}</span>
-          ))}
-          {t.follows && !meta.length ? <span>{compactNumber(t.follows)} followers</span> : null}
+      {line && (
+        <span className="card-reason" data-done={readState === 2 || undefined}>
+          {line}
         </span>
       )}
       <TitleActionsSheet title={t} open={menu} onClose={() => setMenu(false)} context={context} />

@@ -1,87 +1,100 @@
-"""Derive every Dawghwa mascot asset from the single supplied artwork.
+"""Derive every Dawghwa mascot asset from the supplied artwork.
 
-Source: brand/mascot-source.png (1254x1254 RGBA, supplied by the project owner).
+Sources (supplied by the project owner in the mascot blueprint PDF, page 15):
+  brand/mascot-source-onblack.jpg  1254x1254, the artwork on its black stage
+  brand/mascot-source.png          the same artwork cut out (RGBA) for use on any background
 The character is never redrawn or altered; variants are crops, scales and
 backgrounds only. Run: python3 scripts/brand-assets.py
 """
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = Image.open(ROOT / "brand/mascot-source.png").convert("RGBA")
-S = SRC.width / 1080  # crop boxes below were measured on a 1080px preview
+CUT = Image.open(ROOT / "brand/mascot-source.png").convert("RGBA")
+STAGE = Image.open(ROOT / "brand/mascot-source-onblack.jpg").convert("RGBA")
 
-INK = (21, 21, 25, 255)  # --bg dark #151519
-VERMILION = (255, 89, 72, 255)
-LAVENDER = (184, 165, 247, 255)
+BLACK = (4, 1, 8, 255)  # onboarding stage, matches the artwork's background
+PURPLE = (150, 60, 255)
 
-def box(x0, y0, x1, y1):
-    return tuple(int(v * S) for v in (x0, y0, x1, y1))
-
-HEAD = SRC.crop(box(215, 95, 815, 695))  # head + paw + top of the crowned book
-WIDE = SRC.crop(box(165, 60, 865, 760))  # maskable: face stays inside the 80% safe circle
-FACE = SRC.crop(box(300, 170, 760, 630))  # tight face for tiny sizes
+FULL = (114, 120, 1174, 1180)   # whole figure, square
+HEAD = (150, 175, 1140, 1165)   # ears to paws, a little tighter than FULL
+FACE = (380, 300, 950, 870)     # eyes, nose, mouth for 20-40px slots
+WIDE = (60, 60, 1194, 1194)     # maskable: figure stays inside the 80% safe circle
 
 mascot = ROOT / "src/assets/mascot"
 mascot.mkdir(parents=True, exist_ok=True)
 
 def save_webp(img, path, size):
-    img.resize((size, size), Image.LANCZOS).save(path, "WEBP", quality=84, method=6)
+    img.resize((size, size), Image.LANCZOS).save(path, "WEBP", quality=86, method=6)
 
-# full figure (onboarding, empty states, achievements)
-save_webp(SRC, mascot / "default.webp", 640)
-save_webp(SRC, mascot / "default-320.webp", 320)
-save_webp(HEAD, mascot / "head.webp", 256)
-save_webp(FACE, mascot / "face.webp", 128)
+save_webp(CUT.crop(FULL), mascot / "default.webp", 640)
+save_webp(CUT.crop(FULL), mascot / "default-320.webp", 320)
+save_webp(CUT.crop(HEAD), mascot / "head.webp", 256)
+save_webp(CUT.crop(FACE), mascot / "face.webp", 128)
 
-def halftone(size, color, step, rmax, fade=True):
+def glow(size):
+    """Soft purple glow behind the figure, like the blueprint's onboarding stage."""
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
-    for y in range(0, size + step, step):
-        for x in range(0, size + step, step):
-            off = step / 2 if (y // step) % 2 else 0
-            cx, cy = x + off, y
-            t = (cx + (size - cy)) / (2 * size) if fade else 1  # stronger toward top-right
-            r = rmax * max(0.0, t - 0.35) / 0.65
-            if r > 0.4:
-                d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
-    return layer
+    r = size * 0.36
+    c = size / 2
+    d.ellipse((c - r, c - r * 0.9, c + r, c + r * 1.1), fill=PURPLE + (90,))
+    return layer.filter(ImageFilter.GaussianBlur(size * 0.09))
 
-def icon(size, pad_ratio, rounded, bg=INK, art=HEAD):
-    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    base = Image.new("RGBA", (size, size), bg)
-    base.alpha_composite(halftone(size, (255, 89, 72, 70), max(6, size // 26), max(1.5, size / 70)))
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=int(size * rounded), fill=255)
-    canvas.paste(base, (0, 0), mask)
-    inner = int(size * (1 - pad_ratio * 2))
-    a = art.resize((inner, inner), Image.LANCZOS)
+def icon(size, rounded, box, pad=0.0):
+    base = Image.new("RGBA", (size, size), BLACK)
+    base.alpha_composite(glow(size))
+    inner = int(size * (1 - pad * 2))
+    art = CUT.crop(box).resize((inner, inner), Image.LANCZOS)
     off = (size - inner) // 2
-    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    layer.paste(a, (off, off), a)
-    clipped = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    clipped.paste(layer, (0, 0), Image.composite(layer.getchannel("A"), Image.new("L", (size, size), 0), mask))
-    canvas.alpha_composite(clipped)
-    return canvas
+    base.alpha_composite(art, (off, off))
+    if rounded:
+        mask = Image.new("L", (size, size), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=int(size * rounded), fill=255)
+        out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        out.paste(base, (0, 0), mask)
+        return out
+    return base
 
 icons = ROOT / "public/icons"
-icon(512, 0.0, 0.22).save(icons / "icon-512.png")
-icon(192, 0.0, 0.22).save(icons / "icon-192.png")
-icon(180, 0.0, 0.0).save(icons / "apple-touch-icon.png")
-# maskable: full-bleed background, art inside the 80% safe zone
-icon(512, 0.0, 0.0, art=WIDE).save(icons / "maskable-512.png")
-icon(192, 0.0, 0.0, art=WIDE).save(icons / "maskable-192.png")
-icon(64, 0.0, 0.25, art=FACE).save(icons / "favicon-64.png")
-# Android adaptive foreground: transparent, art within the 66% safe circle
-# Android adaptive foreground: opaque full-bleed art (the launcher mask crops to ~66%)
-icon(432, 0.0, 0.0, art=WIDE).save(icons / "android-foreground-432.png")
+icon(512, 0.22, FULL, pad=0.05).save(icons / "icon-512.png")
+icon(192, 0.22, FULL, pad=0.05).save(icons / "icon-192.png")
+icon(180, 0.0, FULL, pad=0.05).save(icons / "apple-touch-icon.png")
+icon(512, 0.0, WIDE, pad=0.06).save(icons / "maskable-512.png")
+icon(192, 0.0, WIDE, pad=0.06).save(icons / "maskable-192.png")
+icon(64, 0.25, FACE).save(icons / "favicon-64.png")
+icon(432, 0.0, WIDE, pad=0.12).save(icons / "android-foreground-432.png")
 
-# Open Graph card 1200x630: ink, halftone, mascot right, wordmark drawn by the app font is not
-# available to PIL, so the card carries the artwork and the HTML title carries the name.
-og = Image.new("RGBA", (1200, 630), INK)
-og.alpha_composite(halftone(1200, (255, 89, 72, 40), 22, 6).crop((0, 0, 1200, 630)))
-ImageDraw.Draw(og).rectangle((0, 600, 1200, 630), fill=VERMILION)
-m = SRC.resize((600, 600), Image.LANCZOS)
-og.alpha_composite(m, (620, 10))
+# Open Graph card 1200x630: black stage, purple glow, mascot right.
+og = Image.new("RGBA", (1200, 630), BLACK)
+g = glow(900)
+og.alpha_composite(g, (520, -135))
+og.alpha_composite(CUT.crop(FULL).resize((600, 600), Image.LANCZOS), (560, 15))
 og.convert("RGB").save(ROOT / "public/og-art.png")
 print("brand assets written")
+
+# Android launcher icons + splash (Capacitor project)
+res = ROOT / "android/app/src/main/res"
+if res.exists():
+    dens = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+    fg = Image.new("RGBA", (432, 432), (0, 0, 0, 0))
+    fg.alpha_composite(CUT.crop(WIDE).resize((300, 300), Image.LANCZOS), (66, 66))
+    for name, k in dens.items():
+        d = res / f"mipmap-{name}"
+        n = int(48 * k)
+        icon(n, 0.0, FULL, pad=0.05).save(d / "ic_launcher.png")
+        r = icon(n, 0.0, FULL, pad=0.05)
+        m = Image.new("L", (n, n), 0)
+        ImageDraw.Draw(m).ellipse((0, 0, n - 1, n - 1), fill=255)
+        rr = Image.new("RGBA", (n, n), (0, 0, 0, 0)); rr.paste(r, (0, 0), m)
+        rr.save(d / "ic_launcher_round.png")
+        fg.resize((int(108 * k), int(108 * k)), Image.LANCZOS).save(d / "ic_launcher_foreground.png")
+    for p in res.glob("drawable*/splash.png"):
+        w, h = Image.open(p).size
+        s = Image.new("RGBA", (w, h), BLACK)
+        side = int(min(w, h) * 0.55)
+        gl = glow(int(side * 1.5))
+        s.alpha_composite(gl, ((w - gl.width) // 2, (h - gl.height) // 2))
+        s.alpha_composite(CUT.crop(FULL).resize((side, side), Image.LANCZOS), ((w - side) // 2, (h - side) // 2))
+        s.convert("RGB").save(p)
+    print("android assets written")

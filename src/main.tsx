@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import "@fontsource-variable/inter/index.css";
-import "@fontsource-variable/archivo/wdth.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/app.css";

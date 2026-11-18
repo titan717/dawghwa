@@ -7,10 +7,10 @@
 :root {
   /* Archivo (variable weight + width) is the only display face: wide/black for headlines,
      condensed for chapter numbers and labels. Inter for UI and reading. */
-  --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --display-stretch: 100%;
-  --label-stretch: 68%;
+  --label-stretch: 100%;
 
   /* type scale (1.2 minor third, fluid at the top) */
   --text-2xs: 0.6875rem;
@@ -63,10 +63,15 @@
   --dur-slow: 320ms;
 
   /* brand constants (theme independent) */
-  --vermilion: #ff5948;
-  --lime: #b8f35a;
-  --lavender: #b8a5f7;
-  --on-bright: #151519; /* text on vermilion / lime / lavender fills: ≥ 5.9:1 */
+  /* blueprint v2 (mascot-blueprint-and-reader.pdf): signal green for action and "new",
+     the mascot's violet/magenta for onboarding and brand moments. Names kept for history. */
+  --vermilion: #e040fb; /* "hot" = mascot magenta */
+  --lime: #00f07a; /* blueprint green (sampled #00F97B) */
+  --lavender: #a66bff; /* mascot violet */
+  --on-bright: #000000; /* text on green / magenta / violet fills */
+  --grad-brand: linear-gradient(90deg, #c631ff 0%, #ee31ff 100%); /* blueprint Continue / Save */
+  --brand-violet: #c631ff;
+  --brand-stage: #040108; /* onboarding stage, matches the mascot artwork */
 }
 
 /* Dark: near-black "ink" stage like the blueprint, flat surfaces, no frames.
@@ -74,29 +79,32 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0e0e10;
-  --bg-raised: #141417;
-  --surface: #1c1c20;
-  --surface-2: #26262b;
-  --surface-3: #313137;
+  --bg: #171717; /* blueprint page */
+  --bg-raised: #1e1e1e; /* blueprint tiles */
+  --surface: #1e1e1e;
+  --surface-2: #2a2a2a;
+  --surface-3: #434343; /* blueprint search field */
+  --nav-bg: #000000; /* blueprint bottom bar */
   --line: rgb(255 255 255 / 0.08);
   --line-strong: rgb(255 255 255 / 0.16);
-  --ink: #f5f5f1; /* 18.3:1 on bg */
-  --ink-2: #c9c9c3; /* 12.1:1 */
-  --ink-3: #9b9b95; /* 7.0:1 on bg, 6.2:1 on surface */
-  --ink-4: #66666a; /* decorative / disabled only */
-  --frame: #f5f5f1;
+  --ink: #ffffff; /* 17.9:1 on bg */
+  --ink-2: #cfcfcf; /* 11.4:1 */
+  --ink-3: #9e9e9e; /* 6.6:1 on bg, 6.1:1 on surface */
+  --ink-4: #666666; /* decorative / disabled only */
+  --frame: #ffffff;
   --accent: var(--lime);
-  --accent-hover: #c8f77a;
+  --accent-hover: #3dff9a;
   --accent-ink: var(--on-bright);
-  --accent-soft: rgb(184 243 90 / 0.14);
-  --accent-text: #b8f35a; /* 14.6:1 on bg */
+  --accent-soft: rgb(0 240 122 / 0.14);
+  --accent-text: #00f07a; /* 11.6:1 on bg */
+  --badge-bg: #005c27; /* blueprint "New Series" badge */
+  --badge-ink: #00f07a;
   --hot: var(--vermilion);
-  --hot-text: #ff7a6b; /* 7.4:1 on bg */
-  --lime-text: #b8f35a;
-  --lime-soft: rgb(184 243 90 / 0.14);
-  --lavender-text: #c4b5fa;
-  --lavender-soft: rgb(184 165 247 / 0.15);
+  --hot-text: #ec6dff; /* 6.4:1 on bg */
+  --lime-text: #00f07a;
+  --lime-soft: rgb(0 240 122 / 0.14);
+  --lavender-text: #c39bff;
+  --lavender-soft: rgb(166 107 255 / 0.16);
   --good: #7fd69a;
   --warn: #f2c35b;
   --bad: #ff7a72;
@@ -107,36 +115,39 @@
   --shadow-lg: 0 24px 64px rgb(0 0 0 / 0.6);
   --hard-shadow: none;
   --halftone: rgb(255 255 255 / 0.06);
-  --skeleton-a: #19191d;
-  --skeleton-b: #25252a;
+  --skeleton-a: #1e1e1e;
+  --skeleton-b: #2a2a2a;
 }
 
 /* Light: warm paper, deep ink. Lime stays a fill; its text form is a deep olive. */
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f5f1;
+  --bg: #ffffff;
   --bg-raised: #ffffff;
-  --surface: #ecebe6;
-  --surface-2: #e2e1db;
-  --surface-3: #d6d5ce;
+  --surface: #f2f2f2;
+  --surface-2: #e8e8e8;
+  --surface-3: #ececec;
+  --nav-bg: #ffffff;
   --line: rgb(17 17 20 / 0.1);
   --line-strong: rgb(17 17 20 / 0.2);
-  --ink: #111114; /* 18.0:1 on paper */
-  --ink-2: #3d3d42; /* 10.4:1 */
-  --ink-3: #5f5f64; /* 6.1:1 on paper, 5.4:1 on surface */
-  --ink-4: #9a9a9e;
-  --frame: #111114;
+  --ink: #111111; /* 18.9:1 on white */
+  --ink-2: #3d3d3d; /* 10.9:1 */
+  --ink-3: #626262; /* 6.0:1 on white, 5.5:1 on surface */
+  --ink-4: #9a9a9a;
+  --frame: #111111;
   --accent: var(--lime);
-  --accent-hover: #a6e744;
+  --accent-hover: #00d86c;
   --accent-ink: var(--on-bright);
-  --accent-soft: rgb(120 180 20 / 0.16);
-  --accent-text: #3b6300; /* 6.9:1 on paper */
+  --accent-soft: rgb(0 200 100 / 0.14);
+  --accent-text: #00733a; /* 5.6:1 on white */
+  --badge-bg: #d5fbe6;
+  --badge-ink: #00612f;
   --hot: var(--vermilion);
-  --hot-text: #b8281a; /* 5.6:1 on paper */
-  --lime-text: #3b6300;
-  --lime-soft: rgb(120 180 20 / 0.16);
-  --lavender-text: #5d43c8;
-  --lavender-soft: rgb(184 165 247 / 0.3);
+  --hot-text: #9c1fb8; /* 6.6:1 on white */
+  --lime-text: #00733a;
+  --lime-soft: rgb(0 200 100 / 0.14);
+  --lavender-text: #6a33c8;
+  --lavender-soft: rgb(166 107 255 / 0.18);
   --good: #1d6a41;
   --warn: #8a5a00;
   --bad: #b3261e;
@@ -147,8 +158,8 @@
   --shadow-lg: 0 24px 64px rgb(17 17 20 / 0.18);
   --hard-shadow: none;
   --halftone: rgb(17 17 20 / 0.07);
-  --skeleton-a: #e6e5df;
-  --skeleton-b: #f1f0eb;
+  --skeleton-a: #ececec;
+  --skeleton-b: #f6f6f6;
 }
 
 /* semantic aliases (prefer these in new code) */
