@@ -3,17 +3,22 @@ import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /** Editorial section heading: numbered (via CSS counter inside .feed), title, honest subtitle, "See all". */
+/**
+ * Blueprint v2 section heading: bold title, and a chevron at the right edge that
+ * opens the full list. The honest "how this row is made" line stays available to
+ * assistive tech and as a tooltip, but is not printed (the blueprint shows none).
+ */
 export function SectionHead({ id, title, subtitle, more, action }: { id: string; title: string; subtitle?: string; more?: string; action?: ReactNode }) {
   return (
     <div className="section-head">
-      <div className="section-titles">
+      <div className="section-titles" title={subtitle}>
         <h2 id={`row-${id}`}>{title}</h2>
-        {subtitle && <p>{subtitle}</p>}
+        {subtitle && <p className="sr-only">{subtitle}</p>}
       </div>
       {action}
       {more && (
         <Link to={more} className="see-all" aria-label={`See all: ${title}`}>
-          See all <ChevronRight size={15} />
+          <ChevronRight size={24} strokeWidth={2.2} />
         </Link>
       )}
     </div>

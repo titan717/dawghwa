@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, ListOrdered, RotateCw, Settings2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, Check, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, ListOrdered, RotateCw, Settings2 } from "lucide-react";
 import { Mascot } from "@/components/Mascot";
 import { ChapterNo } from "@/components/Editorial";
 import { Sheet } from "@/components/Layer";
@@ -11,6 +11,7 @@ import { saveProgress, useUser } from "@/lib/store/user";
 import { lifecycle, onBack, setImmersive, haptic } from "@/lib/platform";
 import { prefersVertical, readerPath, titlePath, type Title } from "@/lib/titles";
 import { useHead } from "@/lib/seo";
+import { coverSrc } from "@/lib/api/images";
 import type { Chapter, ChapterPage } from "@/lib/api/types";
 
 type Mode = Exclude<ReaderMode, "auto">;
@@ -386,6 +387,42 @@ export default function Reader() {
     goChapter(next);
   }, [countdown, goChapter, next]);
 
+  // Blueprint "Pull to read next": at the very bottom of a scrolled chapter, dragging up past
+  // the end by ~90px opens the next chapter. The visible button does the same for taps, mice and keyboards.
+  const [pull, setPull] = useState(0);
+  const reduceMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  useEffect(() => {
+    if (mode !== "vertical" || !next) return;
+    let startY: number | null = null;
+    let amount = 0;
+    const atBottom = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+    const onStart = (e: TouchEvent) => {
+      startY = atBottom() ? e.touches[0]!.clientY : null;
+      amount = 0;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (startY === null) return;
+      amount = Math.max(0, (startY - e.touches[0]!.clientY) / 90);
+      setPull(amount);
+    };
+    const onEnd = () => {
+      if (startY !== null && amount >= 1) goChapter(next);
+      startY = null;
+      amount = 0;
+      setPull(0);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [mode, next, goChapter]);
+
   // preload upcoming pages in paged mode
   useEffect(() => {
     if (mode === "vertical") return;
@@ -420,37 +457,70 @@ export default function Reader() {
       </div>
     );
 
+  const creators = [...new Set([...(title?.meta?.authors ?? []), ...(title?.meta?.artists ?? [])])];
+  const vertical = mode === "vertical";
+  // Blueprint v2 reader end: Creator block, Next card with cover, TOP, and "Pull to read next".
   const endPanel = (
     <div className="rd-end" aria-live="polite">
-      <Mascot variant="head" size={72} className="rd-end-mascot" />
-      <p className="rd-end-kicker">
-        End of <ChapterNo n={chapter?.number} />
-      </p>
-      {next ? (
-        <>
-          <h2 className="rd-end-title">One more chapter?</h2>
-          <button className="btn btn-primary btn-lg" onClick={() => goChapter(next)}>
-            Chapter {next.number}
-            {next.title ? `: ${next.title}` : ""} <ChevronRight size={18} />
+      <section className="rd-end-sheet">
+        <p className="rd-end-kicker">
+          End of <ChapterNo n={chapter?.number} />
+        </p>
+        {creators.length > 0 && (
+          <div className="rd-creator">
+            <h2>Creator</h2>
+            <p>{creators.join(", ")}</p>
+          </div>
+        )}
+        {next ? (
+          <button className="rd-next-card" onClick={() => goChapter(next)}>
+            {title?.cover ? <img src={coverSrc(title.cover)} alt="" referrerPolicy="no-referrer" decoding="async" /> : <span className="rd-next-thumb" />}
+            <span className="rd-next-body">
+              <strong>Next Chapter</strong>
+              <span>
+                Chapter {next.number}
+                {next.title ? `: ${next.title}` : ""}
+              </span>
+            </span>
+            <ChevronRight size={22} aria-hidden="true" />
           </button>
-          {countdown !== null && countdown > 0 && (
-            <p className="rd-countdown">
-              Continuing in {countdown}s ·{" "}
-              <button className="link-btn" onClick={() => setCountdown(null)}>
-                Stay here
-              </button>
-            </p>
+        ) : list.length ? (
+          <div className="rd-caught">
+            <Mascot size={96} className="rd-end-mascot" pose="done" />
+            <div>
+              <h2 className="rd-end-title">You're caught up</h2>
+              <p className="rd-end-note">This is the latest chapter on {sourceName}. New chapters show up in My Series when they're released.</p>
+            </div>
+          </div>
+        ) : null}
+        {countdown !== null && countdown > 0 && (
+          <p className="rd-countdown">
+            Continuing in {countdown}s ·{" "}
+            <button className="link-btn" onClick={() => setCountdown(null)}>
+              Stay here
+            </button>
+          </p>
+        )}
+        <Link className="rd-back-title" to={backTo}>
+          Back to {title?.title ?? "title"}
+        </Link>
+      </section>
+      {vertical && (
+        <div className="rd-pull" data-armed={pull >= 1 || undefined}>
+          <button className="rd-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })} aria-label="Back to top of chapter">
+            <ChevronUp size={18} aria-hidden="true" />
+            TOP
+          </button>
+          {next && (
+            <button className="rd-pull-go" onClick={() => goChapter(next)} style={{ "--pull": Math.min(1, pull) } as React.CSSProperties}>
+              <span className="rd-pull-ico" aria-hidden="true">
+                <ArrowDown size={30} strokeWidth={1.8} />
+              </span>
+              <span>{pull >= 1 ? "Release to read next chapter" : "Pull to read next chapter"}</span>
+            </button>
           )}
-        </>
-      ) : list.length ? (
-        <>
-          <h2 className="rd-end-title">You're caught up</h2>
-          <p className="rd-end-note">This is the latest chapter on {sourceName}. New chapters show up on Home when they're released.</p>
-        </>
-      ) : null}
-      <Link className="btn btn-ghost" to={backTo}>
-        Back to title
-      </Link>
+        </div>
+      )}
     </div>
   );
 

@@ -13,7 +13,7 @@ await p.waitForTimeout(500);
 const icons = await p.locator(".onboard-chip").evaluateAll((els) => els.map((e) => [e.textContent.trim(), !!e.querySelector("svg")]));
 await p.screenshot({ path: "/tmp/down-onboard3.png" });
 await p.route("**/api/**", (r) => r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "down", code: "SOURCE_UNAVAILABLE" }) }));
-await p.getByRole("button", { name: "Skip" }).click();
+await p.getByRole("button", { name: "Cancel" }).click();
 await p.waitForTimeout(9000);
 const errs = await p.locator(".state, [role=alert]").count();
 const retry = await p.getByRole("button", { name: /Retry|Try again/ }).count();
