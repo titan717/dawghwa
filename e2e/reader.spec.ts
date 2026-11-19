@@ -22,15 +22,17 @@ test("reader opens a supported chapter without marking it read", async ({ page, 
   await skipOnboarding(page);
   await page.goto(`/read/mangadex/${target!.id}/${target!.chapter}`);
   await expect(page.locator(".reader img, [data-reader] img").first()).toBeAttached({ timeout: 25_000 });
-  // Scroll-only reader: the top bar stays put while scrolling, and there is no bottom bar.
+  // Scroll-only reader: the top bar slides away on scroll-down and is back on scroll-up (D61).
+  // There is no bottom bar; the progress line is a slider (D63).
   const bar = page.locator(".rd-top");
   await expect(bar).toBeVisible();
   await page.mouse.wheel(0, 1200);
-  await page.waitForTimeout(300);
-  await expect(bar).toBeInViewport();
-  expect((await bar.boundingBox())!.y).toBe(0);
+  await expect(bar).toHaveAttribute("data-hidden");
+  await page.mouse.wheel(0, -60);
+  await expect(bar).not.toHaveAttribute("data-hidden");
+  await expect.poll(async () => (await bar.boundingBox())!.y).toBe(0);
   await expect(page.locator(".rd-bottom")).toHaveCount(0);
-  await expect(page.getByRole("progressbar", { name: "Chapter progress" })).toBeAttached();
+  await expect(page.getByRole("slider", { name: "Chapter progress" })).toBeAttached();
   // Comments live in the top bar: open, post, and see the count.
   await page.getByRole("button", { name: "Comments (0)" }).click();
   const sheet = page.getByRole("dialog", { name: "Comments (0)" });

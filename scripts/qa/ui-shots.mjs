@@ -82,6 +82,23 @@ for (const theme of ["dark", "light"]) {
         await page.keyboard.press("End");
         await settle(2500);
         await shot("reader-end");
+        if (process.env.READER_EXTRAS) {
+          // phase 3 states: bar tucked away mid-chapter, zoomed strip, width setting preview
+          await page.keyboard.press("Home");
+          await settle(1500);
+          await page.mouse.wheel(0, 1400);
+          await settle(1500);
+          await shot("reader-hidden");
+          await page.mouse.dblclick(vp.width / 2, vp.height / 2);
+          await settle(1500);
+          await shot("reader-zoom");
+          await page.keyboard.press("Escape");
+          await page.mouse.wheel(0, -80);
+          await settle(600);
+          await page.getByRole("button", { name: "Reader settings" }).click();
+          await settle(1200);
+          await shot("reader-settings");
+        }
       }
     }
     await ctx.close();

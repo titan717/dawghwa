@@ -41,6 +41,8 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 - Cards: vermilion = new (the "Up" sticker and the "N new" unread pill), lime = progress (the bar along the cover's bottom edge). See D45.
 - Title page (D50 to D57): `--tp-backdrop-fade` (per theme) dissolves the blurred banner into the page by 86% of its height; `--shadow-cover` is the cover's layered shadow (the light one is kept short so the kicker under the cover stays AA); `--peel` 18px / `--peel-hover` 34px with `--peel-under-a`/`-b` and `--shadow-peel` draw the folded corner; `--panel-travel` is how far a tab panel slides in; `--blur-chrome` 12px frosts sticky chrome (mobile CTA bar, jump rail). Reduced motion sets panel travel to 0 and pins the peel. Text over the banner is checked against real pixels by `scripts/qa/title-contrast.mjs`.
 - Title page parts: `.tp-tabbar` (sticky; holds the tablist, the sliding `.tp-tabs-ink` and the desktop `.tp-mini-cta`), `.provider-picker` (radios for readable sources, dashed struck-through text for unavailable ones), `.ch-group` volume headers (same 56px row height as chapters, so the list stays virtualized), `.ch-jump` rail (60+ rows), `<time class="ch-when">`.
+- Reader (D60 to D65): `--ease-spring-physics` is a sampled damped spring (stiffness 260, damping 24) with a cubic-bezier fallback, paired with `--dur-spring` 550ms; use it for things that land (a new chapter's pages, the end card, zoom, the zoom chip). `--dur-bar-hide` 200ms / `--dur-bar-show` (= `--dur-fast`) time the auto-hiding bar; `--chapter-rise` 32px is the chapter entrance travel. All four are zeroed under reduced motion. Reader width is `--rd-w`, set by `.reader[data-width]` (narrow 600px, comfortable 820px, fit 100%) and multiplied by `--zoom` while zoomed.
+- Reader parts: `.rd-top[data-hidden]` (bar tucked away; the 2px `.rd-progress` slider stays on screen), `.rd-pan` > `.rd-pages` (zoom pan box), `.rd-zoom-chip`, `.rd-wn` "what's next" card (`.rd-next-card`, `.rd-next-timer`, `.rd-wn-actions`, `.rd-rate`), `.rd-preview` (width preview in settings). Logic for the bar and zoom lives in `src/lib/readerGestures.ts`.
 
 ## Components (where they live)
 
@@ -63,7 +65,7 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 | Avatar with cosmetic frame | `src/components/ProfileAvatar.tsx` (`.pavatar*`) | n/a |
 | Segmented control | `src/components/Segmented.tsx` (`.segmented`) | n/a |
 | Comments sheet / list / composer | `src/components/Comments.tsx` (`.cm*`) | n/a |
-| Reader top bar, end panel, reward beat | `src/routes/Reader.tsx` (`.rd-top`, `.rd-end`, `.rd-beat`) | n/a |
+| Reader top bar (auto-hide, scrubber), zoom, "what's next" card, reward beat | `src/routes/Reader.tsx`, `src/lib/readerGestures.ts` (`.rd-top`, `.rd-pan`, `.rd-wn`, `.rd-beat`) | WEBTOON viewer |
 | Series progress ring on cards | `ProgressRing` + `useSeriesFraction` (`.card-ring`, `.continue-ring`) | n/a |
 | Achievements page | `src/routes/Achievements.tsx` (`.ach-*`, `.badge-grid`) | n/a |
 | Sign-in ("Who's reading?", PIN pad) | `src/components/SignIn.tsx` (`.signin*`) | n/a |

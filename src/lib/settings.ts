@@ -23,6 +23,8 @@ export interface Settings {
   matureCovers: "blur" | "show";
   /** Discover grid density: cover-forward (big art) or compact (more per row). */
   gridDensity: "covers" | "compact";
+  /** Reader strip width on tablets and desktop (D65). Phones always use the full width. */
+  readerWidth: "fit" | "comfortable" | "narrow";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rewards: true,
   matureCovers: "blur",
   gridDensity: "covers",
+  readerWidth: "comfortable",
 };
 
 /** Older builds stored `achievements` (milestones on/off); it becomes `rewards`. */

@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Bookmark as BookmarkIcon, BookmarkCheck, Check, ChevronLeft, ChevronRight, ListOrdered, Maximize2, MessageCircle, Minimize2, RotateCw, Settings2, X } from "lucide-react";
+import { ArrowLeft, Bookmark as BookmarkIcon, BookmarkCheck, Check, ChevronLeft, ChevronRight, ListOrdered, Maximize2, MessageCircle, Minimize2, RotateCw, Settings2, ThumbsDown, ThumbsUp, X, ZoomOut } from "lucide-react";
 import { Mascot } from "@/components/Mascot";
 import { ChapterNo } from "@/components/Editorial";
 import { Sheet } from "@/components/Layer";
+import { Segmented } from "@/components/Segmented";
 import { Cover } from "@/components/Cover";
 import { ProgressRing } from "@/components/ProgressRing";
 import { CommentList, CommentsSheet } from "@/components/Comments";
 import { Celebrations } from "@/components/Celebrate";
 import { ErrorState, errorText } from "@/components/States";
 import { useChapters, usePages, useSources, useTitle } from "@/lib/query";
-import { reducedMotion, updateSettings, useSettings } from "@/lib/settings";
-import { saveProgress, useUser } from "@/lib/store/user";
+import { reducedMotion, updateSettings, useSettings, type Settings } from "@/lib/settings";
+import { clamp, useAutoHideBar, useStripZoom } from "@/lib/readerGestures";
+import { relativeTime } from "@/lib/time";
+import { rate, saveProgress, useUser } from "@/lib/store/user";
 import { useSignInRequired } from "@/lib/store/accounts";
 import { SignIn } from "@/components/SignIn";
 import { lifecycle, onBack, setImmersive, haptic } from "@/lib/platform";
@@ -25,7 +28,8 @@ import { chapterAliases, chapterBadge, chapterLabel, editionLabel, fallbackPlan,
 import { isBookmarked, removeBookmark, toggleBookmark, useBookmarks } from "@/lib/store/bookmarks";
 
 /**
- * Scroll-only reader (D8). The top bar is always on screen (D9) and carries the
+ * Scroll-only reader (D8). The top bar slides away on scroll-down and comes back on
+ * scroll-up or a tap (D61, superseding D9's always-on bar) and carries the
  * chapter's comments and a 2px progress line on its bottom edge (D10); there is
  * no bottom bar. The chapter end holds the reward beat, the next episode and
  * comments, so nothing ever interrupts a chapter in progress.
@@ -98,6 +102,7 @@ function ReaderView() {
   const title = t.data;
   const chapters = useChapters(title);
   const prog = useUser((s) => (title ? s.progress.get(title.key) : undefined));
+  const rating = useUser((s) => (title ? s.library.get(title.key)?.rating : undefined));
   const [pageRefreshKey, setPageRefreshKey] = useState(0);
 
   // ------------------------------------------------------------ chapter + version
@@ -160,6 +165,13 @@ function ReaderView() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [beat, setBeat] = useState<Moment | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const panRef = useRef<HTMLDivElement>(null);
+  const pagesRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLElement>(null);
+  const scrubbing = useRef(false);
+  // the chapter the reader moved to from the end card / list: its pages spring in (D60)
+  const [enterKey, setEnterKey] = useState<string | null>(null);
+  const [endInView, setEndInView] = useState(false);
   const restored = useRef(false);
   const pageRefreshAt = useRef(0);
   // comments belong to the canonical chapter, so every version of it shares them
@@ -324,9 +336,14 @@ function ReaderView() {
     const end = root.querySelector(".rd-end-mark");
     const endIo = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && setReachedEnd(true), { threshold: 0 });
     if (end) endIo.observe(end);
+    // the bar stays put while the end card is on screen (D61)
+    const card = root.querySelector(".rd-end");
+    const cardIo = new IntersectionObserver((es) => setEndInView(es[es.length - 1]!.isIntersecting), { threshold: 0 });
+    if (card) cardIo.observe(card);
     return () => {
       io.disconnect();
       endIo.disconnect();
+      cardIo.disconnect();
     };
   }, [count, chapterKey, activeVariantId]);
 
@@ -399,6 +416,83 @@ function ReaderView() {
     return stop;
   }, [count, startPage, title, activeVariantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ------------------------------------------------------------ chrome + zoom (phase 3)
+  const bar = useAutoHideBar(() => pinning.current || scrubbing.current);
+  const quietBar = bar.quiet;
+  const beforeZoomAdjust = useCallback(() => quietBar(400), [quietBar]);
+  const zoom = useStripZoom(panRef, pagesRef, beforeZoomAdjust);
+  const resetZoom = zoom.reset;
+  const [barFocus, setBarFocus] = useState(false);
+  const wide = useWide();
+  const barHidden = bar.hidden && count > 0 && !panel && !chList && !commentsOpen && !endInView && !barFocus;
+  useEffect(() => {
+    resetZoom();
+    bar.setHidden(false);
+  }, [chapterKey, activeVariantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // one tap on the pages toggles the bar; two quick taps zoom (D62). The single tap waits
+  // out the double-tap window so a zoom never flashes the bar.
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const tapTimer = useRef(0);
+  useEffect(() => () => clearTimeout(tapTimer.current), []);
+  const onPagesClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+    const now = performance.now();
+    const p = lastTap.current;
+    if (p && now - p.t < 300 && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 40) {
+      clearTimeout(tapTimer.current);
+      lastTap.current = null;
+      zoom.zoomAt(zoom.zoomRef.current > 1 ? 1 : 2, e.clientX, e.clientY);
+      void haptic("light");
+      return;
+    }
+    lastTap.current = { t: now, x: e.clientX, y: e.clientY };
+    clearTimeout(tapTimer.current);
+    tapTimer.current = window.setTimeout(() => {
+      lastTap.current = null;
+      bar.setHidden((h) => !h);
+    }, 300);
+  };
+  const zoomCenter = (z: number) => zoom.zoomAt(z, window.innerWidth / 2, window.innerHeight / 2);
+
+  // the 2px progress line doubles as a scrubber: tap or drag to jump (D63)
+  const seek = (f: number) => {
+    const strip = pagesRef.current;
+    if (!strip) return;
+    const r = strip.getBoundingClientRect();
+    const span = Math.max(0, r.height - window.innerHeight);
+    quietBar(400);
+    window.scrollTo(0, r.top + window.scrollY + span * clamp(f, 0, 1));
+  };
+  const seekFrom = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    seek((e.clientX - r.left) / r.width);
+  };
+  const seekPage = (i: number) => {
+    const el = pagesRef.current?.querySelector<HTMLElement>(`[data-index="${clamp(i, 0, count - 1)}"]`);
+    if (!el) return;
+    quietBar(400);
+    window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - barHeight()));
+  };
+  const onScrubKey = (e: React.KeyboardEvent) => {
+    const cur = Math.min(page, count - 1);
+    const map: Record<string, () => void> = {
+      ArrowRight: () => seekPage(cur + 1),
+      ArrowUp: () => seekPage(cur + 1),
+      ArrowLeft: () => seekPage(cur - 1),
+      ArrowDown: () => seekPage(cur - 1),
+      PageDown: () => seek(fraction + 0.1),
+      PageUp: () => seek(fraction - 0.1),
+      Home: () => seek(0),
+      End: () => seek(1),
+    };
+    const fn = map[e.key];
+    if (!fn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    fn();
+  };
+
   const goChapter = useCallback(
     (c?: Chapter) => {
       if (!c || !title) return;
@@ -406,6 +500,7 @@ function ReaderView() {
       // keep the same provider and translation group when the next chapter has it
       const v = pickVariant(c, { previous: selectedVariant ?? null });
       setNotice(null);
+      setEnterKey(c.id);
       nav(readerPath(title, c.id, undefined, v?.sourceId ?? activeSource, v ? variantIdOf(v) : undefined), { replace: true });
     },
     [nav, title, save, activeSource, selectedVariant],
@@ -509,10 +604,11 @@ function ReaderView() {
       if (e.key === "]") goChapter(next);
       else if (e.key === "[") goChapter(prev);
       else if (e.key === "c" && target) setComments("read");
+      else if (e.key === "z" && count) zoomCenter(zoom.zoomRef.current > 1 ? 1 : 2);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goChapter, next, prev, panel, chList, commentsOpen, target, setComments]);
+  }, [goChapter, next, prev, panel, chList, commentsOpen, target, setComments, count]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Android back / Escape: close a layer, then leave to the title page
   useEffect(
@@ -521,11 +617,12 @@ function ReaderView() {
         if (panel) return (setPanel(false), true);
         if (chList) return (setChList(false), true);
         if (commentsOpen) return (setComments(false), true);
+        if (zoom.zoomRef.current > 1) return (zoomCenter(1), true);
         if (title) nav(titlePath(title), { replace: true });
         else nav(-1);
         return true;
       }),
-    [panel, chList, commentsOpen, setComments, title, nav],
+    [panel, chList, commentsOpen, setComments, title, nav], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const onLoad = useCallback((i: number, r: number) => setRatios((m) => (m[i] === r ? m : { ...m, [i]: r })), []);
@@ -573,27 +670,43 @@ function ReaderView() {
     );
 
   const top = threads(comments, "top");
+  const nextWhen = next ? relativeTime(next.lastUpdated) : undefined;
+  const rateSeries = (r: 1 | -1) => {
+    if (!title) return;
+    const nextR = rating === r ? undefined : r;
+    void rate(title, nextR);
+    if (nextR) void haptic("success");
+  };
+  // "what's next" card (D64): next chapter first, then the way back and a quick rating
   const endPanel = (
-    <section className="rd-end" aria-label="End of chapter">
+    <section className="rd-end rd-wn" aria-label="End of chapter" data-in={reachedEnd || undefined}>
       <div className="rd-end-head">
         <p className="rd-end-kicker">
           End of <ChapterNo n={chapter?.number} label={chapter && chapter.numberText !== undefined ? chapterBadge(chapter) : undefined} />
         </p>
-        {beat && settings.rewards ? <RewardBeat m={beat} /> : <Mascot variant="head" size={64} className="rd-end-mascot" />}
+        {beat && settings.rewards ? <RewardBeat m={beat} /> : !next && <Mascot variant="head" size={64} className="rd-end-mascot" />}
       </div>
 
       {next ? (
         <div className="rd-next">
-          <button className="rd-next-card" onClick={() => goChapter(next)}>
-            {title && <Cover src={title.cover} title={title.title} sizes="64px" mature={isMature(title)} />}
+          <button className="rd-next-card" onClick={() => goChapter(next)} aria-describedby={countdown ? "rd-countdown" : undefined}>
+            {title && <Cover src={title.cover} title={title.title} sizes="72px" mature={isMature(title)} />}
             <span className="rd-next-body">
-              <span className="rd-next-kicker">Next episode</span>
+              <span className="rd-next-kicker">Up next</span>
               <span className="rd-next-title">{chapterLabel(next)}</span>
+              {nextWhen && (
+                <time className="rd-next-when" dateTime={nextWhen.iso} title={nextWhen.full}>
+                  Updated {nextWhen.label}
+                </time>
+              )}
             </span>
-            <ChevronRight size={20} aria-hidden="true" />
+            <span className="rd-next-go" aria-hidden="true">
+              <ChevronRight size={22} />
+            </span>
+            {countdown !== null && countdown > 0 && <span className="rd-next-timer" aria-hidden="true" style={{ "--cd": countdown / 8 } as React.CSSProperties} />}
           </button>
           {countdown !== null && countdown > 0 && (
-            <p className="rd-countdown" aria-live="polite">
+            <p className="rd-countdown" id="rd-countdown" aria-live="polite">
               Next chapter in {countdown}s ·{" "}
               <button className="link-btn" onClick={() => setCountdown(null)}>
                 Stay here
@@ -607,6 +720,25 @@ function ReaderView() {
           <p className="rd-end-note">This is the latest chapter on {sourceName}. New chapters show up on Home when they're released.</p>
         </div>
       ) : null}
+
+      <div className="rd-wn-actions">
+        <Link className="btn rd-wn-back" to={backTo}>
+          <ArrowLeft size={16} aria-hidden="true" /> Back to series
+        </Link>
+        {title && (
+          <div className="rd-rate" role="group" aria-labelledby="rd-rate-q">
+            <span className="rd-rate-q" id="rd-rate-q">
+              How's the series?
+            </span>
+            <button className="icon-btn rd-rate-btn" aria-label="Like this series" aria-pressed={rating === 1} data-pop={rating === 1 || undefined} onClick={() => rateSeries(1)}>
+              <ThumbsUp size={18} />
+            </button>
+            <button className="icon-btn rd-rate-btn" aria-label="Not for me" aria-pressed={rating === -1} data-pop={rating === -1 || undefined} onClick={() => rateSeries(-1)}>
+              <ThumbsDown size={18} />
+            </button>
+          </div>
+        )}
+      </div>
 
       {target && (
         <div className="rd-comments">
@@ -626,16 +758,13 @@ function ReaderView() {
       )}
 
       <p className="rd-credits">Credits: {[selectedVariant?.group?.name ?? chapter?.group?.name, `via ${prettySource(sourceName)}`, chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null].filter(Boolean).join(" · ")}</p>
-      <div className="rd-end-links">
-        {prev && (
+      {prev && (
+        <div className="rd-end-links">
           <button className="btn btn-ghost" onClick={() => goChapter(prev)}>
             <ChevronLeft size={16} /> {chapterLabel(prev)}
           </button>
-        )}
-        <Link className="btn btn-ghost" to={backTo}>
-          Back to title
-        </Link>
-      </div>
+        </div>
+      )}
     </section>
   );
 
@@ -676,11 +805,14 @@ function ReaderView() {
       </Link>
     </div>
   ) : (
-    <div className="rd-strip" ref={scroller}>
-      <div className="rd-pages">
-        {pages.map((p) => (
-          <PageImage key={p.url} page={p} eager={Math.abs(p.index - startPage) < 3} onFail={onFail} onLoad={onLoad} ratio={ratios[p.index]} />
-        ))}
+    // keyed: the loading skeleton's nodes must not be reused as the pan box (that reads as a layout shift)
+    <div className="rd-strip" key="strip" ref={scroller}>
+      <div className="rd-pan" ref={panRef}>
+        <div className="rd-pages" ref={pagesRef} key={`${chapterKey}|${activeVariantId}`} data-enter={enterKey === chapterKey || undefined} onClick={onPagesClick}>
+          {pages.map((p) => (
+            <PageImage key={p.url} page={p} eager={Math.abs(p.index - startPage) < 3} onFail={onFail} onLoad={onLoad} ratio={ratios[p.index]} />
+          ))}
+        </div>
       </div>
       <div className="rd-end-mark" aria-hidden="true" />
       {endPanel}
@@ -690,9 +822,9 @@ function ReaderView() {
   const shown = count ? (reachedEnd ? 1 : fraction) : 0;
 
   return (
-    <div className="reader">
+    <div className="reader" data-width={settings.readerWidth} data-zoom={zoom.zoom > 1 || undefined} style={zoom.zoom > 1 ? ({ "--zoom": zoom.zoom } as React.CSSProperties) : undefined}>
       <Celebrations />
-      <header className="rd-top">
+      <header className="rd-top" ref={topRef} data-hidden={barHidden || undefined} onFocus={(e) => e.target.matches(":focus-visible") && setBarFocus(true)} onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setBarFocus(false)}>
         <Link className="icon-btn" to={backTo} replace aria-label="Back to title">
           <ArrowLeft size={20} />
         </Link>
@@ -725,7 +857,37 @@ function ReaderView() {
         <button className="icon-btn" aria-label="Reader settings" aria-haspopup="dialog" onClick={() => setPanel(true)}>
           <Settings2 size={20} />
         </button>
-        <div className="rd-progress" role="progressbar" aria-label="Chapter progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(shown * 100)}>
+        <div
+          className="rd-progress"
+          role="slider"
+          tabIndex={count ? 0 : -1}
+          aria-label="Chapter progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(shown * 100)}
+          aria-valuetext={count ? `Page ${Math.min(page, count - 1) + 1} of ${count}` : undefined}
+          aria-disabled={!count || undefined}
+          style={{ "--rd-frac": `${shown * 100}%` } as React.CSSProperties}
+          onKeyDown={count ? onScrubKey : undefined}
+          onPointerDown={(e) => {
+            if (!count || e.button !== 0) return;
+            scrubbing.current = true;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            e.currentTarget.dataset.scrub = "";
+            seekFrom(e);
+          }}
+          onPointerMove={(e) => scrubbing.current && seekFrom(e)}
+          onPointerUp={(e) => {
+            if (!scrubbing.current) return;
+            scrubbing.current = false;
+            delete e.currentTarget.dataset.scrub;
+            quietBar(300);
+          }}
+          onPointerCancel={(e) => {
+            scrubbing.current = false;
+            delete e.currentTarget.dataset.scrub;
+          }}
+        >
           <span style={{ transform: `scaleX(${shown})` }} />
         </div>
       </header>
@@ -749,6 +911,12 @@ function ReaderView() {
         )}
         {body}
       </main>
+
+      {zoom.zoom > 1 && (
+        <button className="rd-zoom-chip" onClick={() => (zoomCenter(1), void haptic("light"))}>
+          <ZoomOut size={16} aria-hidden="true" /> <span className="tabular">{Math.round(zoom.zoom * 10) / 10}×</span> · Reset zoom
+        </button>
+      )}
 
       <CommentsSheet open={Boolean(commentsOpen)} onClose={() => setComments(false)} target={target} items={comments} compose={commentsOpen === "write"} />
 
@@ -811,6 +979,13 @@ function ReaderView() {
             </span>
             <input type="checkbox" checked={settings.dataSaver} onChange={(e) => (updateSettings({ dataSaver: e.target.checked }), void haptic("light"))} />
           </label>
+          {wide && (
+            <div className="settings-row rd-width-row">
+              <span>Page width</span>
+              <Segmented label="Page width" value={settings.readerWidth} options={WIDTHS.map((w) => [w.id, w.label])} onChange={(v) => (updateSettings({ readerWidth: v }), void haptic("light"))} />
+              <WidthPreview src={pages[Math.min(page, count - 1)]?.url} width={settings.readerWidth} page={Math.min(page, count - 1) + 1} />
+            </div>
+          )}
           {typeof document !== "undefined" && document.fullscreenEnabled && (
             <div className="settings-row">
               <span>Fullscreen</span>
@@ -847,11 +1022,51 @@ function ReaderView() {
             </label>
           )}
           <p className="muted" style={{ fontSize: "var(--text-xs)" }}>
-            Pages scroll top to bottom. Keys: [ and ] change chapter, C opens comments.
+            Pages scroll top to bottom. Double-tap or pinch to zoom. Keys: [ and ] change chapter, C opens comments, Z zooms.
           </p>
         </div>
       </Sheet>
     </div>
+  );
+}
+
+const WIDTHS: { id: Settings["readerWidth"]; label: string; px?: number }[] = [
+  { id: "narrow", label: "Narrow", px: 600 },
+  { id: "comfortable", label: "Comfortable", px: 820 },
+  { id: "fit", label: "Fit screen" },
+];
+
+function useWide() {
+  const q = "(min-width: 600px)";
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.matchMedia(q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(q);
+    const on = () => setWide(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
+/**
+ * Live preview for the width setting (D65): a scaled screen showing the page you're on
+ * (its already-loaded image, no new request) at the chosen width.
+ */
+function WidthPreview({ src, width, page }: { src?: string; width: Settings["readerWidth"]; page: number }) {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1440;
+  const w = WIDTHS.find((x) => x.id === width);
+  const frac = w?.px ? Math.min(1, w.px / vw) : 1;
+  return (
+    <figure className="rd-preview" aria-hidden="true">
+      <div className="rd-preview-screen">
+        <div className="rd-preview-page" style={{ width: `${frac * 100}%` }}>
+          {src ? <img src={src} alt="" decoding="async"/> : null}
+        </div>
+      </div>
+      <figcaption className="rd-preview-cap">
+        Page {page} at {w?.label ?? "Fit screen"} · {w?.px ? `${Math.min(w.px, vw)}px` : "full width"} of your {vw}px window
+      </figcaption>
+    </figure>
   );
 }
 

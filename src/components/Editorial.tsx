@@ -25,7 +25,9 @@ export function ChapterNo({ n, label, prefix = "Ch", className = "" }: { n?: num
   const numeric = label === undefined || /^\d+(?:\.\d+)?$/.test(label);
   const text = label === undefined ? chNum(n) : numeric ? chNumText(label) : label;
   return (
-    <span className={`ch-no ${className}`} aria-label={numeric ? `Chapter ${label ?? n}` : label}>
+    <span className={`ch-no ${className}`}>
+      {/* aria-label isn't allowed on a plain span (axe aria-prohibited-attr): spoken text lives in sr-only */}
+      <span className="sr-only">{numeric ? `Chapter ${label ?? n}` : label}</span>
       {numeric && <small aria-hidden="true">{prefix}</small>}
       <span aria-hidden="true">{text}</span>
     </span>

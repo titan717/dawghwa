@@ -46,6 +46,25 @@ for (const theme of ["dark", "light"] as const) {
   });
 }
 
+// UI polish phase 3: the reader bar and scrubber, the "what's next" card and the settings preview.
+for (const theme of ["dark", "light"] as const) {
+  test(`axe: reader has no serious violations (${theme})`, async ({ page }) => {
+    test.skip(!(await apiUp(page)), "API not running");
+    await page.addInitScript((t) => localStorage.setItem("dawghwa:settings", JSON.stringify({ theme: t, autoNext: false })), theme);
+    await skipOnboarding(page);
+    await page.goto("/title/mangadex/77bee52c-d2d6-44ad-a33a-1734c1fe696a");
+    await expect(page.locator(".chapter").first()).toBeVisible({ timeout: 30_000 });
+    await page.locator("a[href^='/read/']").first().click();
+    await expect(page.locator(".rd-page img").first()).toBeAttached({ timeout: 25_000 });
+    await audit(page, "reader");
+    await page.keyboard.press("End");
+    await expect(page.getByRole("region", { name: "End of chapter" })).toBeInViewport({ timeout: 15_000 });
+    await audit(page, "reader-end");
+    await page.getByRole("button", { name: "Reader settings" }).click();
+    await audit(page, "reader-settings");
+  });
+}
+
 test("rewards off: no quest rings, no level, card without level", async ({ page }) => {
   await skipOnboarding(page);
   await page.goto("/profile");

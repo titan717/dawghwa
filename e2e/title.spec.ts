@@ -51,10 +51,15 @@ test("the tab underline slides to the selected tab", async ({ page }) => {
   const list = page.getByRole("tablist", { name: "Series sections" });
   const ink = () => list.evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--ink-x")) || 0);
   // measured on first paint, not only after the first tab change
-  const first = (await page.getByRole("tab", { name: /Chapters/ }).boundingBox())!;
   await expect.poll(async () => (await page.locator(".tp-tabs-ink").boundingBox())?.width ?? 0).toBeGreaterThan(10);
-  const c0 = (await page.locator(".tp-tabs-ink").boundingBox())!;
-  expect(Math.abs(c0.x + c0.width / 2 - (first.x + first.width / 2))).toBeLessThan(2);
+  // the tab label can still grow as the chapter count arrives, and the ink then slides to follow it
+  await expect
+    .poll(async () => {
+      const first = (await page.getByRole("tab", { name: /Chapters/ }).boundingBox())!;
+      const c0 = (await page.locator(".tp-tabs-ink").boundingBox())!;
+      return Math.abs(c0.x + c0.width / 2 - (first.x + first.width / 2));
+    })
+    .toBeLessThan(2);
   const before = await ink();
   await page.getByRole("tab", { name: /About/ }).click();
   await expect.poll(ink).toBeGreaterThan(before);
