@@ -179,3 +179,48 @@ test("fallback: MangaDex page request fails -> same chapter, same language on Dy
   await expect.poll(() => reports.length).toBeGreaterThan(0);
   expect(JSON.stringify(reports[0])).toContain("mangadex");
 });
+
+const RAGNAROK = { id: "c3ea5ce6-f659-4fe9-95b6-520cec9fcb13", slug: "solo-leveling-ragnarok" };
+
+test("Asura Scans: linked on the unified title page, native reader, real images, progress", async ({ page }) => {
+  await search(page, "asurascan", "Solo Leveling: Ragnarok", /ragnarok/i);
+  await openTitle(page, RAGNAROK);
+  const row = page.locator("[data-chapter-key]").first();
+  await page.getByLabel("Find chapter").fill("1");
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const versions = row.getByRole("button", { name: /Choose version of/ });
+  if (await versions.count()) {
+    await versions.click();
+    await page.getByRole("dialog").getByRole("link", { name: /Asura/ }).first().click();
+  } else {
+    await row.getByRole("link").first().click();
+  }
+  await expect(page).toHaveURL(/\/read\/.+s=asurascan/);
+  await decodedImages(page, 2);
+  await expect(page.locator(".rd-chapter").getByText(/via AsuraScan/)).toBeVisible();
+  // images are relayed by the API, never loaded from the provider by the browser
+  const srcs = await page.locator(".rd-page img").evaluateAll((els) => els.map((e) => (e as HTMLImageElement).currentSrc || (e as HTMLImageElement).src));
+  expect(srcs.every((s) => s.includes("/api/image") && s.includes("source=asurascan"))).toBe(true);
+  await page.waitForTimeout(1500);
+  const p = (await progress(page)).find((x) => x.sourceId === "asurascan");
+  expect(p, "Asura progress saved").toBeDefined();
+  await page.screenshot({ path: "test-results/live-asura-reader.png" });
+});
+
+test("Scanlation site from 'Search all sources': provider title page, native reader, progress", async ({ page }) => {
+  await page.goto("/search?q=ragnarok");
+  await page.getByRole("button", { name: "Search all sources" }).click();
+  const block = page.locator(".list").filter({ has: page.locator(".eyebrow", { hasText: /^Thunderscans ·/ }) });
+  await expect(block.locator("a.list-item").first()).toBeVisible({ timeout: 120_000 });
+  await block.locator("a.list-item").first().click();
+  await expect(page).toHaveURL(/\/title\/thunderscans\//);
+  const row = page.locator("[data-chapter-key]").first();
+  await expect(row).toBeVisible({ timeout: 60_000 });
+  await row.getByRole("link").first().click();
+  await expect(page).toHaveURL(/\/read\/thunderscans\//);
+  await decodedImages(page, 2);
+  await page.waitForTimeout(1500);
+  const p = (await progress(page)).find((x) => x.sourceId === "thunderscans" || x.titleKey?.startsWith("thunderscans"));
+  expect(p, "Thunderscans progress saved").toBeDefined();
+  await page.screenshot({ path: "test-results/live-thunderscans-reader.png" });
+});
