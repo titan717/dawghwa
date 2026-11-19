@@ -48,7 +48,7 @@ test("shelf arrows land on a card edge", async ({ page, isMobile }) => {
   await page.waitForTimeout(800);
   const aligned = await row.locator(".row-track").first().evaluate((t) => {
     const base = (t.children[0] as HTMLElement).offsetLeft;
-    return t.scrollLeft > 0 && [...t.children].some((k) => Math.abs((k as HTMLElement).offsetLeft - base - t.scrollLeft) < 2);
+    return t.scrollLeft > 0 && Array.from(t.children).some((k) => Math.abs((k as HTMLElement).offsetLeft - base - t.scrollLeft) < 2);
   });
   expect(aligned).toBe(true);
 });
