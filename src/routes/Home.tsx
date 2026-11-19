@@ -151,7 +151,7 @@ function CatalogueSection({ def, ctx, claims, order }: { def: SectionDef; ctx: R
     return (
       <section className="section" ref={ref} aria-busy="true">
         <SectionHead id={def.id} title={def.title} subtitle={def.subtitle} />
-        <RowSkeleton />
+        <RowSkeleton layout={def.layout} />
       </section>
     );
   if (items.length < (def.min ?? MIN_ROW)) return <div ref={ref} />; // not enough real matches: row is omitted

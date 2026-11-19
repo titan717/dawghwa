@@ -3,17 +3,99 @@ import { RefreshCw, WifiOff } from "lucide-react";
 import { isApiError } from "@/lib/api/errors";
 import { Mascot, type Pose } from "./Mascot";
 
+/**
+ * Skeletons reuse the real card classes (.card-cover, .card-title, .card-meta), so the
+ * placeholder has the same box sizes as the card that replaces it: no shift on load.
+ */
 export function CardSkeleton() {
   return (
-    <div className="card" aria-hidden="true">
-      <div className="cover skeleton" />
-      <div className="skeleton skeleton-line" style={{ width: "85%" }} />
-      <div className="skeleton skeleton-line" style={{ width: "50%" }} />
+    <div className="card card-skeleton" aria-hidden="true">
+      <span className="card-cover">
+        <span className="cover skeleton" />
+      </span>
+      <span className="card-title skel-lines">
+        <i className="skeleton" style={{ width: "88%" }} />
+        <i className="skeleton" style={{ width: "56%" }} />
+      </span>
+      <span className="card-meta">
+        <span className="skeleton skel-text" style={{ width: "48%" }}>
+          &nbsp;
+        </span>
+      </span>
     </div>
   );
 }
 
-export function RowSkeleton({ count = 8 }: { count?: number }) {
+/** Ranked-row placeholder: same three-column grid (rank, cover, text) as `.ranked-item`. */
+function RankedSkeleton() {
+  return (
+    <div className="card card-skeleton" aria-hidden="true">
+      <span className="ranked-item">
+        <span className="ranked-num skel-rank" />
+        <span className="cover skeleton" />
+        <span>
+          <span className="card-title skel-lines">
+            <i className="skeleton" style={{ width: "90%" }} />
+            <i className="skeleton" style={{ width: "60%" }} />
+          </span>
+          <span className="card-meta" style={{ marginTop: 4 }}>
+            <span className="skeleton skel-text" style={{ width: "40%" }}>
+              &nbsp;
+            </span>
+          </span>
+        </span>
+      </span>
+    </div>
+  );
+}
+
+export function RowSkeleton({ count = 8, layout = "row" }: { count?: number; layout?: "row" | "ranked" | "wide" | "spread" }) {
+  if (layout === "ranked")
+    return (
+      <div className="row-ranked">
+        <div className="row-track" aria-hidden="true">
+          {Array.from({ length: Math.max(count, 9) }, (_, i) => (
+            <RankedSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  if (layout === "wide")
+    return (
+      <div className="row-wide">
+        <div className="row-track" aria-hidden="true">
+          {Array.from({ length: count }, (_, i) => (
+            <span key={i} className="wide-card card-skeleton">
+              <span className="cover skeleton" />
+              <span className="wide-body">
+                <span className="card-title skel-lines">
+                  <i className="skeleton" style={{ width: "80%" }} />
+                  <i className="skeleton" style={{ width: "45%" }} />
+                </span>
+                <span className="skeleton skel-block" />
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  if (layout === "spread")
+    return (
+      <div className="spread-grid" aria-hidden="true">
+        <span className="lead-card panel card-skeleton">
+          <span className="cover skeleton" />
+          <span className="lead-body">
+            <span className="skeleton skel-block" style={{ height: 44 }} />
+            <span className="skeleton skel-block" />
+          </span>
+        </span>
+        <div className="spread-rest">
+          {Array.from({ length: 6 }, (_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
   return (
     <div className="row-track" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
@@ -23,9 +105,9 @@ export function RowSkeleton({ count = 8 }: { count?: number }) {
   );
 }
 
-export function GridSkeleton({ count = 12 }: { count?: number }) {
+export function GridSkeleton({ count = 12, density }: { count?: number; density?: "compact" | "covers" }) {
   return (
-    <div className="grid" aria-busy="true" aria-label="Loading">
+    <div className="grid" data-density={density} aria-busy="true" aria-label="Loading">
       {Array.from({ length: count }, (_, i) => (
         <CardSkeleton key={i} />
       ))}

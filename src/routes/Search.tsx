@@ -263,7 +263,10 @@ export default function Search() {
   }, [q, profileId]);
 
   const intent = useMemo(() => withFilters(parseIntent(q, vocab.data), { kinds: fKinds, status: fStatus, tags: fTags, order: fOrder }), [q, vocab.data, params]); // eslint-disable-line react-hooks/exhaustive-deps
+  // typed but not yet debounced: show the result skeleton at once so the screen answers the keystroke
+  const pending = text.trim() !== q && text.trim().length > 0;
   const hasQuery = Boolean(q) || filterCount > 0;
+  const showResults = hasQuery || pending;
   const genres = useMemo(() => (vocab.data?.tags ?? []).filter((t) => t.group === "genre").map((t) => t.name).sort(), [vocab.data]);
   const words = text.trim().toLowerCase().split(/\s+/);
   const lastWord = words.at(-1) ?? "";
@@ -430,7 +433,7 @@ export default function Search() {
         )}
       </div>
 
-      {!hasQuery && (
+      {!showResults && (
         <div className="search-home">
           {recent.length > 0 && (
             <section className="section">
@@ -508,23 +511,23 @@ export default function Search() {
         </div>
       )}
 
-      {hasQuery && (
+      {showResults && (
         <div style={{ marginTop: 8 }}>
-          {titleHits.length > 0 && (
+          {!pending && titleHits.length > 0 && (
             <section className="section title-hits" aria-labelledby="hits-h">
               <div className="section-head">
                 <div className="section-titles">
                   <h2 id="hits-h">Titles matching "{q}"</h2>
                 </div>
               </div>
-              <TitleGrid items={titleHits} context="search-title" />
+              <TitleGrid items={titleHits} context="search-title" highlight={q} />
               <h2 className="hits-then">Matching your description</h2>
             </section>
           )}
           {!(active.isError && !items.length) && (
           <div className="result-head">
             <p className="result-count" aria-live="polite">
-              {active.data ? (items.length ? `${items.length}${structured && intentQ.data?.hasMore ? "+" : ""} ${items.length === 1 ? "title" : "titles"}` : "No titles") : active.isError ? (online ? "Couldn't search" : "Offline") : online ? "Searching..." : "Offline"}
+              {pending ? "Searching..." : active.data ? (items.length ? `${items.length}${structured && intentQ.data?.hasMore ? "+" : ""} ${items.length === 1 ? "title" : "titles"}` : "No titles") : active.isError ? (online ? "Couldn't search" : "Offline") : online ? "Searching..." : "Offline"}
             </p>
             <select className="select select-sm" aria-label="Sort results" value={fOrder ?? ""} onChange={(e) => setParam("order", e.target.value || undefined)}>
               {SORTS.map(([o, l]) => (
@@ -546,14 +549,14 @@ export default function Search() {
           )}
           {active.isError && !items.length ? (
             <ErrorState error={active.error} retry={() => void active.refetch()} />
-          ) : active.isLoading || (structured && !intentQ.data) ? (
+          ) : pending || active.isLoading || (structured && !intentQ.data) ? (
             <GridSkeleton count={12} />
           ) : !items.length ? (
             <EmptyState title={q ? `Nothing found for "${q}"` : "Nothing matches these filters"} action={filterCount > 0 ? <button className="btn" onClick={clearFilters}>Clear filters</button> : undefined}>
               {structured ? "Try fewer filters, or rephrase. Filters marked on device can only check titles that were fetched." : "Check the spelling, or search all sources below."}
             </EmptyState>
           ) : (
-            <TitleGrid items={items} context="search" />
+            <TitleGrid items={items} context="search" highlight={structured ? undefined : q} />
           )}
           {!structured && q.length >= 2 && online && !apiUnreachable && !active.isError && (
             <div style={{ marginTop: 28 }}>

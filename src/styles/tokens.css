@@ -72,6 +72,12 @@
   --pop-scale: 1.08;
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
+  /* discovery surfaces (UI polish phase 1). Reduced motion zeroes the travel below. */
+  --dur-slide: 420ms; /* hero slide / shelf arrow tween */
+  --dur-drift: 22s; /* hero key-art ken-burns cycle */
+  --drift-scale: 1.08; /* how far the key art pushes in */
+  --lift: -4px; /* card hover / focus lift */
+
   /* brand constants (theme independent) */
   --vermilion: #ff5948;
   --lime: #b8f35a;
@@ -112,7 +118,10 @@
   --bad: #ff7a72;
   --scrim: rgb(0 0 0 / 0.72);
   --on-art: #ffffff; /* text placed over artwork (always behind a dark gradient) */
-  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.55) 62%, rgb(0 0 0 / 0.92) 100%);
+  /* bottom of the slide, where the copy sits, is >= 0.82 black: white type stays >= 7:1 on any art (scripts/qa/hero-contrast.mjs) */
+  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.42) 44%, rgb(0 0 0 / 0.82) 64%, rgb(0 0 0 / 0.95) 100%);
+  --art-fade-side: linear-gradient(90deg, rgb(8 8 10 / 0.9) 0%, rgb(8 8 10 / 0.62) 50%, rgb(8 8 10 / 0.2) 100%);
+  --shadow-lift: 0 2px 0 rgb(0 0 0 / 0.4), 0 14px 28px rgb(0 0 0 / 0.55);
   --shadow: 0 1px 0 rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
   --shadow-lg: 0 24px 64px rgb(0 0 0 / 0.6);
   --hard-shadow: none;
@@ -152,7 +161,9 @@
   --bad: #b3261e;
   --scrim: rgb(17 17 20 / 0.5);
   --on-art: #ffffff;
-  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.5) 62%, rgb(0 0 0 / 0.9) 100%);
+  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.4) 44%, rgb(0 0 0 / 0.8) 64%, rgb(0 0 0 / 0.94) 100%);
+  --art-fade-side: linear-gradient(90deg, rgb(8 8 10 / 0.88) 0%, rgb(8 8 10 / 0.6) 50%, rgb(8 8 10 / 0.2) 100%);
+  --shadow-lift: 0 2px 0 rgb(17 17 20 / 0.06), 0 14px 28px rgb(17 17 20 / 0.18);
   --shadow: 0 1px 0 rgb(17 17 20 / 0.05), 0 8px 24px rgb(17 17 20 / 0.1);
   --shadow-lg: 0 24px 64px rgb(17 17 20 / 0.18);
   --hard-shadow: none;
@@ -162,6 +173,9 @@
 }
 
 [data-reduce-motion] {
+  --dur-slide: 0ms;
+  --drift-scale: 1;
+  --lift: 0px;
   --dur-enter: 0ms;
   --dur-ring: 0ms;
   --stagger: 0ms;
@@ -170,6 +184,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dur-slide: 0ms;
+    --drift-scale: 1;
+    --lift: 0px;
     --dur-enter: 0ms;
     --dur-ring: 0ms;
     --stagger: 0ms;

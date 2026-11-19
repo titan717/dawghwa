@@ -36,6 +36,9 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 - Motion: `--dur-fast` 120ms, `--dur` 200ms, `--dur-slow` 320ms, with `--ease-out`. Under reduced motion, animations are removed and the onboarding "Finding stories" beat is skipped.
 - Reward motion tokens: `--dur-enter` 360ms (reward card in), `--dur-ring` 700ms (ring fill), `--dur-celebrate` 3200ms (how long a reward card stays), `--stagger` 45ms, `--rise` 10px, `--pop-scale` 1.08, `--ease-spring`. All are zeroed under `[data-reduce-motion]` and `prefers-reduced-motion`, so rewards appear and change instantly. There is no confetti.
 - Reward colours are aliases, not new hues: `--reward-xp` = lime (action, progress), `--reward-quest` = lavender (mascot, quests, cosmetics), `--reward-new` = vermilion (new genre stamps), `--ring-track`, and badge tiers `--tier-1` ink-3, `--tier-2` lavender, `--tier-3` lime.
+- Discovery motion tokens (D42 to D44): `--dur-slide` 420ms (hero slides and shelf arrows, tweened in `src/lib/motion.ts`), `--dur-drift` 22s with `--drift-scale` 1.08 (hero key-art ken-burns), `--lift` -4px with `--shadow-lift` (card hover and focus). Reduced motion sets slide to 0ms, drift scale to 1 and lift to 0px, and the hero animations to `none`.
+- Art fades: `--art-fade` (bottom, phone hero) and `--art-fade-side` (left, desktop hero). Copy over key art is checked against real pixels by `scripts/qa/hero-contrast.mjs`. Don't weaken a fade without running it.
+- Cards: vermilion = new (the "Up" sticker and the "N new" unread pill), lime = progress (the bar along the cover's bottom edge). See D45.
 
 ## Components (where they live)
 

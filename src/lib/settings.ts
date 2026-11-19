@@ -21,6 +21,8 @@ export interface Settings {
   rewards: boolean;
   /** Blur covers of titles marked suggestive or adult until the reader opts in. */
   matureCovers: "blur" | "show";
+  /** Discover grid density: cover-forward (big art) or compact (more per row). */
+  gridDensity: "covers" | "compact";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -30,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dataSaver: false,
   rewards: true,
   matureCovers: "blur",
+  gridDensity: "covers",
 };
 
 /** Older builds stored `achievements` (milestones on/off); it becomes `rewards`. */

@@ -783,17 +783,6 @@
   gap: 8px;
   border-radius: var(--radius-sm);
 }
-.card-link .cover {
-  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
-}
-@media (hover: hover) {
-  .card-link:hover .cover {
-    transform: translate(-2px, -2px);
-  }
-}
-.card-link:active .cover {
-  transform: scale(0.98);
-}
 .card-title {
   font-size: var(--text-sm);
   font-weight: 650;
@@ -3021,7 +3010,7 @@ fieldset legend { padding: 0; margin-bottom: var(--space-2); }
     transform: scale(1.15);
   }
   .hero-art::after {
-    background: linear-gradient(90deg, rgb(8 8 10 / 0.85) 0%, rgb(8 8 10 / 0.4) 60%, rgb(8 8 10 / 0.2) 100%);
+    background: var(--art-fade-side);
   }
   .hero-cover {
     display: block;
@@ -3953,3 +3942,173 @@ fieldset legend { padding: 0; margin-bottom: var(--space-2); }
 .reader-card-preview img { width: 100%; height: auto; border-radius: var(--radius-lg); box-shadow: inset 0 0 0 1px var(--line); }
 .onboard.onboard-ready { grid-template-rows: 1fr auto; }
 .onboard-ready .onboard-foot-pair { align-self: end; }
+
+/* ============================================================ UI polish phase 1: discovery surfaces */
+/* arrow / dot tweens own the scroll position while they run; snap would fight them */
+[data-tweening] { scroll-snap-type: none !important; }
+
+/* hero: slow ken-burns drift on the active slide's key art, copy rises in on slide change */
+@keyframes hero-drift {
+  from { scale: 1; translate: 0 0; }
+  to { scale: var(--drift-scale); translate: -1.5% -1%; }
+}
+@keyframes hero-copy-in {
+  from { opacity: 0.55; translate: 0 var(--rise); }
+  to { opacity: 1; translate: 0 0; }
+}
+.hero-art { overflow: hidden; }
+.hero-slide:not([aria-hidden]) .hero-art img {
+  animation: hero-drift var(--dur-drift) var(--ease-in-out) infinite alternate;
+  will-change: scale, translate;
+}
+.hero-slide:not([aria-hidden]) .hero-body > * {
+  animation: hero-copy-in var(--dur-slide) var(--ease-out) both;
+}
+.hero-slide:not([aria-hidden]) .hero-body > :nth-child(2) { animation-delay: 40ms; }
+.hero-slide:not([aria-hidden]) .hero-body > :nth-child(3) { animation-delay: 80ms; }
+.hero-slide:not([aria-hidden]) .hero-body > :nth-child(n + 4) { animation-delay: 120ms; }
+/* scroll parallax: art drifts at ~70% of page speed where scroll timelines exist */
+@supports (animation-timeline: scroll()) {
+  @keyframes hero-parallax { to { transform: translateY(9%); } }
+  .hero-art {
+    inset: -9% 0 0;
+    animation: hero-parallax linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100vh;
+  }
+}
+.hero-dots button::before { transition: width var(--dur-slide) var(--ease-out), background var(--dur) var(--ease-out); }
+
+/* cards: lift + shadow on hover / keyboard focus. Transform only, so nothing reflows. */
+.card-cover {
+  border-radius: var(--radius-sm);
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+@media (hover: hover) {
+  .card-link:hover .card-cover {
+    transform: translateY(var(--lift));
+    box-shadow: var(--shadow-lift);
+  }
+}
+.card-link:focus-visible { outline: none; }
+.card-link:focus-visible .card-cover {
+  transform: translateY(var(--lift));
+  box-shadow: var(--shadow-lift);
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.card-link:active .card-cover {
+  transform: scale(0.97);
+  transition-duration: var(--dur-fast);
+}
+/* the title box always reserves two lines, so grids line up whether a title wraps or not */
+.card-link .card-title { min-height: calc(2em * 1.28); }
+
+/* unread pill: vermilion = new (design system accent job) */
+.card-unread {
+  position: absolute;
+  right: 6px;
+  bottom: 9px;
+  z-index: 1;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: var(--hot);
+  color: var(--on-bright);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+/* in-progress bar along the cover's bottom edge */
+.card-progress {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  height: 4px;
+  background: rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+.card-progress > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+}
+.card-ring { bottom: 9px; transition: opacity var(--dur) var(--ease-out), scale var(--dur) var(--ease-out); }
+/* pointer devices: the ring is revealed on hover / focus (touch has no hover, so it stays visible there) */
+@media (hover: hover) {
+  .card-ring { opacity: 0; scale: 0.85; }
+  .card-link:hover .card-ring,
+  .card-link:focus-visible .card-ring { opacity: 1; scale: 1; }
+}
+
+/* fallback art: a lavender halftone plate with a lime bar, typographic title */
+.cover-fallback {
+  background-image:
+    radial-gradient(var(--halftone) 1.1px, transparent 1.6px),
+    radial-gradient(120% 70% at 85% 0%, var(--lavender-soft), transparent 65%),
+    linear-gradient(180deg, transparent 40%, var(--accent-soft));
+  background-size: 7px 7px, 100% 100%, 100% 100%;
+  color: var(--ink);
+}
+
+/* skeletons use the real card classes; these only fill the text boxes */
+.card-skeleton { pointer-events: none; }
+.card-skeleton .card-cover > .cover { display: block; }
+.skel-lines { display: flex; flex-direction: column; justify-content: space-around; min-height: calc(2em * 1.28); font-size: var(--text-sm); }
+.skel-lines > i { display: block; height: 0.8em; }
+.skel-text { display: inline-block; line-height: inherit; }
+.skel-block { display: block; height: 4.5em; margin-top: 8px; }
+.skel-rank { display: block; }
+
+/* discover density toggle */
+.density-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+}
+.density-toggle button {
+  width: 44px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--ink-3);
+  transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+.density-toggle button:hover { color: var(--ink); }
+.density-toggle button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+.density-toggle button:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 1px; }
+.grid[data-density="compact"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100px, 29vw), 1fr));
+  gap: var(--space-4) var(--space-2);
+}
+.grid[data-density="compact"] .card-meta { display: none; }
+.grid[data-density="compact"] .card-title { font-size: var(--text-xs); }
+@media (min-width: 1024px) {
+  .grid[data-density="covers"] { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+  .grid[data-density="compact"] { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: var(--space-5) var(--space-3); }
+}
+
+/* search: matched words */
+.card-title mark {
+  background: var(--accent-soft);
+  color: inherit;
+  font-weight: 800;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* reduced motion: no drift, no parallax, no rise. Explicit none, because the global
+   0.01ms rule would otherwise park the art on its last keyframe. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-art, .hero-slide .hero-art img, .hero-slide .hero-body > * { animation: none !important; }
+  .card-cover, .card-ring { transition: none; }
+}
+[data-reduce-motion] .hero-art,
+[data-reduce-motion] .hero-slide .hero-art img,
+[data-reduce-motion] .hero-slide .hero-body > * { animation: none !important; }
+[data-reduce-motion] .card-cover, [data-reduce-motion] .card-ring { transition: none; }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { animateScrollLeft, shelfTarget } from "@/lib/motion";
 
 /** Editorial section heading: numbered (via CSS counter inside .feed), title, honest subtitle, "See all". */
 export function SectionHead({ id, title, subtitle, more, action }: { id: string; title: string; subtitle?: string; more?: string; action?: ReactNode }) {
@@ -37,11 +38,15 @@ export function Row({ id, title, subtitle, more, children, ranked, className = "
       ro.disconnect();
     };
   }, []);
-  const by = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * track.current.clientWidth * 0.85, behavior: "smooth" });
+  // arrows land on a card edge (snap-to-card) with the shared slide timing
+  const by = (dir: 1 | -1) => {
+    const el = track.current;
+    if (el) void animateScrollLeft(el, shelfTarget(el, dir));
+  };
   return (
     <section className={`section row ${ranked ? "row-ranked" : ""} ${className}`} aria-labelledby={`row-${id}`}>
       <SectionHead id={id} title={title} subtitle={subtitle} more={more} action={action} />
-      <div style={{ position: "relative" }}>
+      <div className="row-frame">
         <div className="row-nav" data-side="prev">
           <button onClick={() => by(-1)} disabled={edges.start} aria-label="Scroll left" tabIndex={-1}>
             <ChevronLeft size={18} />

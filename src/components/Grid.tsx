@@ -3,7 +3,7 @@ import type { Title } from "@/lib/titles";
 import { TitleCard } from "./TitleCard";
 
 /** Responsive cover grid with an infinite-scroll sentinel (and a real button fallback). */
-export function TitleGrid({ items, onMore, hasMore, loadingMore, context, reasons }: { items: Title[]; onMore?: () => void; hasMore?: boolean; loadingMore?: boolean; context?: string; reasons?: Map<string, string> }) {
+export function TitleGrid({ items, onMore, hasMore, loadingMore, context, reasons, density, highlight }: { density?: "compact" | "covers"; highlight?: string; items: Title[]; onMore?: () => void; hasMore?: boolean; loadingMore?: boolean; context?: string; reasons?: Map<string, string> }) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!onMore || !hasMore || !end.current) return;
@@ -13,9 +13,9 @@ export function TitleGrid({ items, onMore, hasMore, loadingMore, context, reason
   }, [onMore, hasMore, loadingMore]);
   return (
     <>
-      <div className="grid">
+      <div className="grid" data-density={density}>
         {items.map((t, i) => (
-          <TitleCard key={t.key} title={t} context={context} eager={i < 6} reason={reasons?.get(t.key)} />
+          <TitleCard key={t.key} title={t} context={context} eager={i < 6} reason={reasons?.get(t.key)} highlight={highlight} />
         ))}
       </div>
       <div ref={end} />

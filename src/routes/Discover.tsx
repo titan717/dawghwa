@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Grid2x2, Grid3x3, SlidersHorizontal, X } from "lucide-react";
+import { updateSettings, useSettings } from "@/lib/settings";
 import { DiscoverHub } from "./DiscoverHub";
 import { TitleGrid } from "@/components/Grid";
 import { EmptyState, ErrorState, GridSkeleton } from "@/components/States";
@@ -45,6 +46,7 @@ export default function Discover() {
 function Catalogue() {
   const [params, setParams] = useSearchParams();
   const [open, setOpen] = useState(false);
+  const settings = useSettings();
   const vocab = useVocabulary();
   const ctx = useRankContext();
   const kinds = list(params, "kind") as MangaKind[];
@@ -150,6 +152,7 @@ function Catalogue() {
     </div>
   );
 
+  const density = settings.gridDensity;
   return (
     <div className="page discover">
       <Link to="/discover" className="back-link">
@@ -168,6 +171,14 @@ function Catalogue() {
               </option>
             ))}
           </select>
+          <div className="density-toggle" role="radiogroup" aria-label="Grid density">
+            <button type="button" role="radio" aria-checked={density === "covers"} aria-label="Large covers" title="Large covers" onClick={() => updateSettings({ gridDensity: "covers" })}>
+              <Grid2x2 size={18} aria-hidden="true" />
+            </button>
+            <button type="button" role="radio" aria-checked={density === "compact"} aria-label="Compact grid" title="Compact grid" onClick={() => updateSettings({ gridDensity: "compact" })}>
+              <Grid3x3 size={18} aria-hidden="true" />
+            </button>
+          </div>
           <button className="btn discover-filter-btn" onClick={() => setOpen(true)} aria-label={`Filters${active ? `, ${active} active` : ""}`}>
             <SlidersHorizontal size={16} /> Filters{active ? ` (${active})` : ""}
           </button>
@@ -213,13 +224,13 @@ function Catalogue() {
           {q.isError && !items.length ? (
             <ErrorState error={q.error} retry={() => void q.refetch()} />
           ) : q.isLoading ? (
-            <GridSkeleton />
+            <GridSkeleton density={density} />
           ) : !items.length ? (
             <EmptyState title="No titles match these filters" action={<button className="btn" onClick={() => setParams({ view: "all" }, { replace: true })}>Clear filters</button>}>
               Try removing a filter. Tag combinations must all match.
             </EmptyState>
           ) : (
-            <TitleGrid items={items} context="discover" hasMore={q.hasNextPage} loadingMore={q.isFetchingNextPage} onMore={() => void q.fetchNextPage()} />
+            <TitleGrid items={items} context="discover" density={density} hasMore={q.hasNextPage} loadingMore={q.isFetchingNextPage} onMore={() => void q.fetchNextPage()} />
           )}
           {q.isError && items.length > 0 && <ErrorState error={q.error} retry={() => void q.fetchNextPage()} compact />}
         </div>

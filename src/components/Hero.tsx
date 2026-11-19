@@ -6,12 +6,15 @@ import { useChapters } from "@/lib/query";
 import { setStatus, useUser } from "@/lib/store/user";
 import { kindLabel, markUnreadable, plainText, readerPath, statusLabel, titlePath, type Title } from "@/lib/titles";
 import { coverSrc } from "@/lib/api/images";
+import { animateScrollLeft } from "@/lib/motion";
 
 /**
  * Blueprint home hero: one large artwork card per featured series, title and
  * genres centred over a dark fade, a white "Start reading" pill and a glass
  * "Save" button. Slides are a native scroll-snap track (swipe on touch,
- * arrows/dots/keyboard elsewhere); nothing auto-advances.
+ * arrows/dots/keyboard elsewhere); nothing auto-advances. The active slide's
+ * key art drifts slowly (ken-burns) and its copy rises in; both are CSS-only and
+ * off under reduced motion.
  */
 export function Hero({ items }: { items: Title[] }) {
   const track = useRef<HTMLDivElement>(null);
@@ -36,7 +39,8 @@ export function Hero({ items }: { items: Title[] }) {
       if (!el || !items.length) return;
       const n = (i + items.length) % items.length;
       const slide = el.children[n] as HTMLElement | undefined;
-      el.scrollTo({ left: slide ? slide.offsetLeft - el.offsetLeft : 0, behavior: "smooth" });
+      // tweened with --dur-slide / --ease-out rather than the browser's variable smooth scroll
+      void animateScrollLeft(el, slide ? slide.offsetLeft - el.offsetLeft : 0);
     },
     [items.length],
   );
