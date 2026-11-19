@@ -39,6 +39,8 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 - Discovery motion tokens (D42 to D44): `--dur-slide` 420ms (hero slides and shelf arrows, tweened in `src/lib/motion.ts`), `--dur-drift` 22s with `--drift-scale` 1.08 (hero key-art ken-burns), `--lift` -4px with `--shadow-lift` (card hover and focus). Reduced motion sets slide to 0ms, drift scale to 1 and lift to 0px, and the hero animations to `none`.
 - Art fades: `--art-fade` (bottom, phone hero) and `--art-fade-side` (left, desktop hero). Copy over key art is checked against real pixels by `scripts/qa/hero-contrast.mjs`. Don't weaken a fade without running it.
 - Cards: vermilion = new (the "Up" sticker and the "N new" unread pill), lime = progress (the bar along the cover's bottom edge). See D45.
+- Title page (D50 to D57): `--tp-backdrop-fade` (per theme) dissolves the blurred banner into the page by 86% of its height; `--shadow-cover` is the cover's layered shadow (the light one is kept short so the kicker under the cover stays AA); `--peel` 18px / `--peel-hover` 34px with `--peel-under-a`/`-b` and `--shadow-peel` draw the folded corner; `--panel-travel` is how far a tab panel slides in; `--blur-chrome` 12px frosts sticky chrome (mobile CTA bar, jump rail). Reduced motion sets panel travel to 0 and pins the peel. Text over the banner is checked against real pixels by `scripts/qa/title-contrast.mjs`.
+- Title page parts: `.tp-tabbar` (sticky; holds the tablist, the sliding `.tp-tabs-ink` and the desktop `.tp-mini-cta`), `.provider-picker` (radios for readable sources, dashed struck-through text for unavailable ones), `.ch-group` volume headers (same 56px row height as chapters, so the list stays virtualized), `.ch-jump` rail (60+ rows), `<time class="ch-when">`.
 
 ## Components (where they live)
 
@@ -82,4 +84,4 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 
 ## Accessibility checks
 
-Every control has an accessible name that contains its visible text (WCAG 2.5.3), touch targets are at least 44px, and colour pairs meet AA in both themes. `e2e/a11y.spec.ts` enforces this with axe-core on every core route. Use a `.sr-only` suffix rather than an `aria-label` that replaces visible text.
+Every control has an accessible name that contains its visible text (WCAG 2.5.3), touch targets are at least 44px, and colour pairs meet AA in both themes. `e2e/a11y.spec.ts` enforces this with axe-core on every core route and on the title page (chapters, scrolled, About) in both themes. Use a `.sr-only` suffix rather than an `aria-label` that replaces visible text.

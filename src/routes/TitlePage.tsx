@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowDownUp, ArrowLeft, BookOpen, Check, ExternalLink, Heart, Info, Layers, MoreHorizontal, Plus, RotateCw, Search, Share2, Sparkles, Star, ThumbsDown, ThumbsUp, Users, X } from "lucide-react";
+import { ArrowDownUp, ArrowLeft, Ban, BookOpen, Check, ExternalLink, Heart, Info, Layers, MoreHorizontal, Plus, RotateCw, Search, Share2, Sparkles, Star, ThumbsDown, ThumbsUp, Users, X } from "lucide-react";
 import { Cover } from "@/components/Cover";
 import { ChapterNo, Sticker } from "@/components/Editorial";
 import { TitleCard } from "@/components/TitleCard";
@@ -21,6 +21,8 @@ import { useWindowVirtual } from "@/lib/useWindowVirtual";
 import { share, haptic } from "@/lib/platform";
 import type { Chapter } from "@/lib/api/types";
 import { coverSrc } from "@/lib/api/images";
+import { relativeTime } from "@/lib/time";
+import { reducedMotion } from "@/lib/settings";
 
 export const STATUS_LABELS: Record<LibraryStatus, string> = { reading: "Reading", plan: "Plan to read", completed: "Completed", on_hold: "On hold", dropped: "Dropped" };
 const ROW_H = 56;
@@ -70,6 +72,53 @@ function VersionSheet({ title, chapter, onClose }: { title: Title; chapter: Chap
   );
 }
 
+type Row = { kind: "vol"; key: string; label: string; count: number } | { kind: "ch"; c: Chapter };
+
+/** Report states that mean "you can't read this here": shown with a dashed frame, an icon and words, not just dimmed. */
+const UNAVAILABLE: Record<string, string> = { "no-match": "Not on this source", error: "Didn't respond", timeout: "Timed out", cancelled: "Not checked", review: "Needs review" };
+
+function ProviderPicker({ data, value, onChange }: { data: ChapterListData; value: string; onChange: (v: string) => void }) {
+  const latest = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of data.chapters) for (const v of c.variants ?? []) if (Number.isFinite(c.number)) m.set(v.sourceId, Math.max(m.get(v.sourceId) ?? -Infinity, c.number));
+    return m;
+  }, [data.chapters]);
+  if (!data.unified || data.sources.length < 2) return null;
+  const available = data.sources.filter((x) => latest.has(x.sourceId));
+  const others = data.sources.filter((x) => !latest.has(x.sourceId));
+  return (
+    <div className="provider-picker">
+      <div className="provider-list" role="radiogroup" aria-label="Read from source">
+        <button type="button" role="radio" aria-checked={value === "all"} className="provider" data-state="all" onClick={() => onChange("all")}>
+          <span className="provider-name">All sources</span>
+          <span className="provider-sub">{available.length} available</span>
+        </button>
+        {available.map((x) => (
+          <button key={x.sourceId} type="button" role="radio" aria-checked={value === x.sourceId} className="provider" data-state="available" onClick={() => onChange(x.sourceId)}>
+            <span className="provider-name">
+              <Check size={14} aria-hidden="true" className="provider-icon" /> {x.source}
+            </span>
+            <span className="provider-sub">
+              Available · latest ch. {Math.floor(latest.get(x.sourceId)!)}
+            </span>
+          </button>
+        ))}
+        {others.map((x) => {
+          const loading = x.status === "loading" || x.status === "linked";
+          return (
+            <span key={x.sourceId} className="provider" data-state={loading ? "loading" : "unavailable"} aria-disabled="true">
+              <span className="provider-name">
+                {loading ? <RotateCw size={14} aria-hidden="true" className="provider-icon spin" /> : <Ban size={14} aria-hidden="true" className="provider-icon" />} {x.source}
+              </span>
+              <span className="provider-sub">{loading ? "Checking…" : x.status === "ok" ? "No readable chapters" : (UNAVAILABLE[x.status] ?? "Not available")}</span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: { title: Title; data: ChapterListData; readable: boolean; sourceName: string; onRetry: () => void; retrying: boolean }) {
   const chapters = data.chapters;
   const progress = useUser((s) => s.progress.get(title.key));
@@ -78,10 +127,13 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
   const [versions, setVersions] = useState<Chapter | null>(null);
   const languages = useMemo(() => [...new Set(chapters.map((c) => c.language ?? "und"))], [chapters]);
   const [lang, setLang] = useState<string>("all");
+  const [provider, setProvider] = useState<string>("all");
   const ref = useRef<HTMLDivElement>(null);
+  const jumpRef = useRef<HTMLElement>(null);
   const list = useMemo(() => {
     const f = find.trim().toLowerCase();
     let xs = lang === "all" ? chapters : chapters.filter((c) => (c.language ?? "und") === lang);
+    if (provider !== "all") xs = xs.filter((c) => c.variants?.some((v) => v.sourceId === provider));
     if (f)
       xs = xs.filter(
         (c) =>
@@ -95,8 +147,67 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
     // "jump to chapter": exact number matches (1, not 10 or 1.5) come first
     const exact = ordered.filter((c) => (c.numberText ?? "") === f);
     return exact.length ? [...exact, ...ordered.filter((c) => !exact.includes(c))] : ordered;
-  }, [chapters, desc, find, lang]);
-  const { start, end } = useWindowVirtual(ref, list.length, ROW_H);
+  }, [chapters, desc, find, lang, provider]);
+  // Volume headers (D52): only when most chapters carry a volume and there are at least two, and not while searching.
+  const rows = useMemo<Row[]>(() => {
+    const withVol = list.filter((c) => c.volume).length;
+    const vols = new Set(list.map((c) => c.volume).filter(Boolean));
+    if (find.trim() || vols.size < 2 || withVol < list.length * 0.5) return list.map((c) => ({ kind: "ch", c }));
+    const out: Row[] = [];
+    let cur: Extract<Row, { kind: "vol" }> | undefined;
+    for (const c of list) {
+      const v = c.volume ?? "";
+      if (!cur || cur.key !== v) {
+        cur = { kind: "vol", key: v, label: v ? `Volume ${v}` : "No volume", count: 0 };
+        out.push(cur);
+      }
+      cur.count++;
+      out.push({ kind: "ch", c });
+    }
+    return out;
+  }, [list, find]);
+  const { start, end } = useWindowVirtual(ref, rows.length, ROW_H);
+  // Jump rail (D53): volumes when grouped, otherwise even chapter ranges. Only for long lists.
+  const jumps = useMemo(() => {
+    if (rows.length < 60) return [];
+    const heads = rows.flatMap((r, i) => (r.kind === "vol" ? [{ i, label: r.key ? `Vol. ${r.key}` : "No vol." }] : []));
+    if (heads.length >= 2) return heads;
+    const step = rows.length > 600 ? 100 : 50;
+    const out: { i: number; label: string }[] = [];
+    for (let i = 0; i < rows.length; i += step) {
+      const a = rows[i] as Extract<Row, { kind: "ch" }>;
+      const b = rows[Math.min(rows.length, i + step) - 1] as Extract<Row, { kind: "ch" }>;
+      const n = (c: Chapter) => (c.numberText ?? (Number.isFinite(c.number) ? String(Math.floor(c.number)) : "?"));
+      out.push({ i, label: `${n(a.c)}–${n(b.c)}` });
+    }
+    return out;
+  }, [rows]);
+  // A tapped jump stays current until the reader scrolls by hand: the last group is often too short
+  // to reach the top of the window, so position alone would highlight the one before it.
+  const [picked, setPicked] = useState<number | null>(null);
+  useEffect(() => {
+    if (picked === null) return;
+    const clear = () => setPicked(null);
+    const opts = { passive: true, once: true } as const;
+    window.addEventListener("wheel", clear, opts);
+    window.addEventListener("touchstart", clear, opts);
+    window.addEventListener("keydown", clear, opts);
+    return () => {
+      window.removeEventListener("wheel", clear);
+      window.removeEventListener("touchstart", clear);
+      window.removeEventListener("keydown", clear);
+    };
+  }, [picked]);
+  const activeJump = picked !== null && picked < jumps.length ? picked : jumps.length ? jumps.reduce((acc, j, k) => (j.i <= start + 8 ? k : acc), 0) : -1;
+  const jumpTo = (i: number, k: number) => {
+    setPicked(k);
+    const el = ref.current;
+    if (!el) return;
+    const rail = jumpRef.current;
+    const stuck = rail ? parseFloat(getComputedStyle(rail).top) + rail.offsetHeight : 0;
+    const y = el.getBoundingClientRect().top + window.scrollY + i * ROW_H - stuck - 4;
+    window.scrollTo({ top: y, behavior: reducedMotion() ? "auto" : "smooth" });
+  };
   const read = progress?.read;
   const readCount = chapters.filter((c) => isChapterRead(read, c)).length;
   const current = progress ? findChapter(chapters, progress.chapterId)?.chapter : undefined;
@@ -113,6 +224,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
         </div>
       </div>
       <SourceStatusBar data={data} onRetry={onRetry} retrying={retrying} />
+      <ProviderPicker data={data} value={provider} onChange={setProvider} />
       <div className="chapter-tools">
         <input className="input" type="search" inputMode="decimal" placeholder="Jump to chapter or search" aria-label="Find chapter" value={find} onChange={(e) => setFind(e.target.value)} />
         {languages.length > 1 && (
@@ -125,7 +237,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
             ))}
           </select>
         )}
-        <button className="btn btn-sm" onClick={() => setDesc((d) => !d)} aria-label={`Sort ${desc ? "oldest first" : "newest first"}`}>
+        <button className="btn btn-sm" onClick={() => setDesc((d) => !d)} aria-label={`${desc ? "Newest" : "Oldest"} first. Sort ${desc ? "oldest first" : "newest first"}`}>
           <ArrowDownUp size={15} /> {desc ? "Newest" : "Oldest"}
         </button>
         {readCount > 0 && (
@@ -134,24 +246,43 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
           </button>
         )}
       </div>
+      {jumps.length > 1 && (
+        <nav ref={jumpRef} className="ch-jump" aria-label="Jump to chapters">
+          {jumps.map((j, k) => (
+            <button key={j.i} type="button" className="ch-jump-btn" aria-current={k === activeJump || undefined} onClick={() => jumpTo(j.i, k)}>
+              {j.label}
+            </button>
+          ))}
+        </nav>
+      )}
       {!list.length && <p className="muted">No chapter matches "{find}".</p>}
-      <div ref={ref} className="chapter-list" style={{ height: list.length * ROW_H }} role="list" aria-busy={!data.complete || undefined}>
-        {list.slice(start, end).map((c, i) => {
+      <div ref={ref} className="chapter-list" style={{ height: rows.length * ROW_H }} role="list" aria-busy={!data.complete || undefined}>
+        {rows.slice(start, end).map((r, i) => {
           const idx = start + i;
+          if (r.kind === "vol")
+            return (
+              <div key={`vol-${r.key}-${idx}`} className="ch-group" role="listitem" style={{ top: idx * ROW_H }}>
+                <h3>{r.label}</h3>
+                <span className="ch-group-count">
+                  {r.count} {r.count === 1 ? "chapter" : "chapters"}
+                </span>
+              </div>
+            );
+          const c = r.c;
           const isRead = isChapterRead(read, c);
           const vs = c.variants ?? [];
           const sourcesHere = [...new Set(vs.map((v) => v.source))];
           const editions = new Set(vs.map((v) => v.edition ?? "unknown"));
+          const when = relativeTime(c.lastUpdated);
           const meta = [
             vs.length > 1 ? `${vs.length} versions · ${sourcesHere.join(", ")}` : [vs[0]?.source ?? sourceName, vs[0]?.group?.name].filter(Boolean).join(" · "),
             editions.has("official") ? "Official" : null,
-            c.volume ? `Vol. ${c.volume}` : null,
-            c.lastUpdated ? c.lastUpdated.slice(0, 10) : null,
+            c.volume && rows[0]?.kind !== "vol" ? `Vol. ${c.volume}` : null,
           ]
             .filter(Boolean)
             .join(" · ");
           const isCurrent = current?.id === c.id;
-          const preferred = pickVariant(c, { previous: isCurrent && progress?.sourceId ? { sourceId: progress.sourceId } : null });
+          const preferred = provider !== "all" ? pickVariant(c, { sourceId: provider }) : pickVariant(c, { previous: isCurrent && progress?.sourceId ? { sourceId: progress.sourceId } : null });
           const label = chapterLabel(c);
           const inner = (
             <>
@@ -163,6 +294,12 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
                 </span>
                 <span className="ch-meta">
                   {data.unified && <span className="lang-chip" aria-label={`Language ${languageLabel(c.language)}`}>{languageLabel(c.language)}</span>}
+                  {when && (
+                    <time className="ch-when" dateTime={when.iso} title={when.full}>
+                      {when.label}
+                    </time>
+                  )}
+                  {when && meta ? " · " : ""}
                   {meta}
                 </span>
               </span>
@@ -177,7 +314,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
               )}
               <span className="chapter-actions">
                 {vs.length > 1 && (
-                  <button className="btn btn-sm btn-ghost version-btn" aria-label={`Choose version of ${label}`} aria-haspopup="dialog" onClick={() => setVersions(c)}>
+                  <button className="btn btn-sm btn-ghost version-btn" aria-label={`${vs.length} versions. Choose version of ${label}`} aria-haspopup="dialog" onClick={() => setVersions(c)}>
                     <Layers size={15} /> {vs.length}
                   </button>
                 )}
@@ -233,6 +370,52 @@ function MoreLikeThis({ title }: { title: Title }) {
   );
 }
 
+/** Sliding underline: the active tab's box, as CSS variables on the tablist (transform-only animation). */
+function useTabInk(ref: React.RefObject<HTMLElement | null>, active: string, mounted: boolean): React.CSSProperties {
+  const [box, setBox] = useState<{ x: number; w: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const b = el.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+      if (b) setBox((o) => (o && o.x === b.offsetLeft && o.w === b.offsetWidth ? o : { x: b.offsetLeft, w: b.offsetWidth }));
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : undefined;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [ref, active, mounted]);
+  return box ? ({ "--ink-x": `${box.x}px`, "--ink-w": `${box.w}px` } as React.CSSProperties) : {};
+}
+
+/**
+ * Horizontal swipe on the tab panel moves to the neighbouring tab (touch only).
+ * Ignored when the gesture starts in a control or in something that scrolls
+ * sideways, and when it is more vertical than horizontal.
+ */
+function useTabSwipe(go: (dir: 1 | -1) => void) {
+  const s = useRef<{ x: number; y: number; t: number } | null>(null);
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.touches.length !== 1 || el.closest("input, select, textarea, [data-no-swipe]")) return (s.current = null);
+      for (let n: HTMLElement | null = el; n && n !== e.currentTarget; n = n.parentElement) if (n.scrollWidth > n.clientWidth + 1 && getComputedStyle(n).overflowX !== "visible") return (s.current = null);
+      const p = e.touches[0]!;
+      s.current = { x: p.clientX, y: p.clientY, t: performance.now() };
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const st = s.current;
+      s.current = null;
+      if (!st) return;
+      const p = e.changedTouches[0]!;
+      const dx = p.clientX - st.x;
+      const dy = p.clientY - st.y;
+      const fast = performance.now() - st.t < 600;
+      if (Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 1.6 && fast) go(dx < 0 ? 1 : -1);
+    },
+  };
+}
+
 type Tab = "chapters" | "about" | "similar";
 const TABS: { id: Tab; label: string }[] = [
   { id: "chapters", label: "Chapters" },
@@ -262,7 +445,16 @@ export default function TitlePage() {
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  const [tab, setTab] = useState<Tab>("chapters");
+  const [tab, setTabState] = useState<Tab>("chapters");
+  // which way the panel slides in: +1 from the right (next tab), -1 from the left
+  const [tabDir, setTabDir] = useState(0);
+  const setTab = (next: Tab) => {
+    const a = TABS.findIndex((x) => x.id === tab);
+    const b = TABS.findIndex((x) => x.id === next);
+    if (a === b) return;
+    setTabDir(b > a ? 1 : -1);
+    setTabState(next);
+  };
   const onTabKey = (e: KeyboardEvent) => {
     const i = TABS.findIndex((x) => x.id === tab);
     const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
@@ -272,6 +464,25 @@ export default function TitlePage() {
     setTab(next);
     document.getElementById(`tp-tab-${next}`)?.focus();
   };
+  const tablist = useRef<HTMLDivElement>(null);
+  const ink = useTabInk(tablist, tab, !!title); // the tablist only mounts once the title has loaded
+  const swipe = useTabSwipe((d) => {
+    const i = TABS.findIndex((x) => x.id === tab);
+    const next = TABS[i + d];
+    if (!next) return;
+    setTab(next.id);
+    void haptic("light");
+  });
+  // desktop: when the hero CTA scrolls away, a compact copy rides in the sticky tab bar (D50)
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [ctaGone, setCtaGone] = useState(false);
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setCtaGone(!e!.isIntersecting && e!.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [Boolean(title)]); // eslint-disable-line react-hooks/exhaustive-deps
   const opened = useRef<string | null>(null);
 
   const src = sources.data?.find((s) => s.id === source);
@@ -399,20 +610,21 @@ export default function TitlePage() {
   };
   const art = coverSrc(title.coverLarge ?? title.cover);
 
-  const cta =
+  const makeCta = (cls = "btn btn-primary btn-lg tp-cta") =>
     chapters.isLoading ? (
-      <button className="btn btn-primary btn-lg tp-cta" disabled>
+      <button className={cls} disabled>
         <BookOpen size={18} /> Finding readable chapters
       </button>
     ) : target?.variants?.length ? (
-      <Link className="btn btn-primary btn-lg tp-cta" to={readerPath(title, target.id, current === target && progress?.page ? progress.page : undefined, (current === target && progress?.sourceId) || target.variants[0]?.sourceId, current === target ? progress?.variantId : undefined)}>
+      <Link className={cls} to={readerPath(title, target.id, current === target && progress?.page ? progress.page : undefined, (current === target && progress?.sourceId) || target.variants[0]?.sourceId, current === target ? progress?.variantId : undefined)}>
         <BookOpen size={18} /> {progress ? startLabel : `Read ${target.kind === "regular" || !target.kind ? `chapter ${targetNo}` : chapterLabel(target)}`}
       </Link>
     ) : (
-      <Link className="btn btn-primary btn-lg tp-cta" to={`/search?q=${encodeURIComponent(title.title)}`}>
+      <Link className={cls} to={`/search?q=${encodeURIComponent(title.title)}`}>
         <Search size={18} /> Find readable sources
       </Link>
     );
+  const cta = makeCta();
 
   const chapterPanel = chapters.isError ? (
     <ErrorState error={chapters.error} retry={() => void chapters.refetch()} compact />
@@ -553,25 +765,6 @@ export default function TitlePage() {
               {lastNum ? <span>{chs.length && chs.length !== Math.floor(lastNum) ? `Latest ch. ${Math.floor(lastNum)}` : `${Math.floor(lastNum)} chapters`}</span> : null}
             </p>
           )}
-          {synopsis && (
-            <button className="tp-synopsis" onClick={() => setAboutOpen(true)} aria-haspopup="dialog" aria-label={`Synopsis: ${synopsis.slice(0, 120)}… Open full details`}>
-              <span aria-hidden="true">{synopsis}</span>
-            </button>
-          )}
-          {tags.length > 0 && (
-            <div className="chips tp-tags" aria-label="Tags">
-              {tags.slice(0, 5).map((g) => (
-                <Link key={g} className="tag" to={`/discover?tag=${encodeURIComponent(g)}`}>
-                  {g}
-                </Link>
-              ))}
-            </div>
-          )}
-          {reason && (
-            <p className="why">
-              <Sparkles size={16} /> <span>{reason}</span>
-            </p>
-          )}
           {readCount > 0 && chs.length > 0 && (
             <div className="title-progress" aria-label={`${readCount} of ${chs.length} chapters read`}>
               <span className="title-progress-bar">
@@ -582,7 +775,9 @@ export default function TitlePage() {
               </span>
             </div>
           )}
-          <div className="tp-cta-wrap">{cta}</div>
+          <div className="tp-cta-wrap" ref={ctaRef}>
+            {cta}
+          </div>
           <div className="react-bar">
             <button className="btn btn-sm" aria-pressed={lib?.rating === 1} onClick={() => void rate(title, lib?.rating === 1 ? undefined : 1)}>
               <ThumbsUp size={15} /> {lib?.rating === 1 ? "Liked" : "Like"}
@@ -613,18 +808,45 @@ export default function TitlePage() {
               <Share2 size={15} /> Share
             </button>
           </div>
+          {synopsis && (
+            <button className="tp-synopsis" onClick={() => setAboutOpen(true)} aria-haspopup="dialog">
+              <span className="sr-only">Synopsis: </span>
+              {synopsis}
+              <span className="sr-only">. Open full details</span>
+            </button>
+          )}
+          {tags.length > 0 && (
+            <div className="chips tp-tags" aria-label="Tags">
+              {tags.slice(0, 5).map((g) => (
+                <Link key={g} className="tag" to={`/discover?tag=${encodeURIComponent(g)}`}>
+                  {g}
+                </Link>
+              ))}
+            </div>
+          )}
+          {reason && (
+            <p className="why">
+              <Sparkles size={16} /> <span>{reason}</span>
+            </p>
+          )}
         </section>
 
         <div className="tp-main">
-          <div className="tp-tabs" role="tablist" aria-label="Series sections" onKeyDown={onTabKey}>
-            {TABS.map((x) => (
-              <button key={x.id} id={`tp-tab-${x.id}`} role="tab" aria-selected={tab === x.id} aria-controls={`tp-panel-${x.id}`} tabIndex={tab === x.id ? 0 : -1} onClick={() => setTab(x.id)}>
-                {x.label}
-                {x.id === "chapters" && chs.length > 0 && <small>{chs.length}</small>}
-              </button>
-            ))}
+          <div className="tp-tabbar">
+            <div className="tp-tabs" role="tablist" aria-label="Series sections" onKeyDown={onTabKey} ref={tablist} style={ink}>
+              {TABS.map((x) => (
+                <button key={x.id} id={`tp-tab-${x.id}`} role="tab" aria-selected={tab === x.id} aria-controls={`tp-panel-${x.id}`} tabIndex={tab === x.id ? 0 : -1} onClick={() => setTab(x.id)}>
+                  {x.label}
+                  {x.id === "chapters" && chs.length > 0 && <small>{chs.length}</small>}
+                </button>
+              ))}
+              <span className="tp-tabs-ink" aria-hidden="true" />
+            </div>
+            <div className="tp-mini-cta" data-on={ctaGone || undefined} aria-hidden={!ctaGone || undefined} inert={!ctaGone || undefined}>
+              {makeCta("btn btn-primary tp-mini-btn")}
+            </div>
           </div>
-          <div className="tp-panel" role="tabpanel" id={`tp-panel-${tab}`} aria-labelledby={`tp-tab-${tab}`}>
+          <div className="tp-panel" role="tabpanel" id={`tp-panel-${tab}`} aria-labelledby={`tp-tab-${tab}`} data-dir={tabDir || undefined} key={tab} {...swipe}>
             {tab === "chapters" ? chapterPanel : tab === "about" ? about : <MoreLikeThis title={title} />}
           </div>
         </div>
