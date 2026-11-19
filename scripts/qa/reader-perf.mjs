@@ -1,3 +1,5 @@
+// Reader LCP and long-task time over 3 fresh loads at 390px (D67). Lighthouse cannot get past onboarding.
+// Usage: BASE=http://localhost:4173 R=/read/<source>/<title>/<chapter> node scripts/qa/reader-perf.mjs
 import { chromium } from "playwright";
 const base = process.env.BASE; const r = process.env.R;
 const browser = await chromium.launch();
