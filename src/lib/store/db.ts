@@ -18,6 +18,8 @@ export interface ProfileRecord {
   id: string;
   name: string;
   color: string;
+  /** Optional bounded local image data; import and display paths revalidate it. */
+  avatar?: string;
   createdAt: number;
   updatedAt: number;
   onboarded: boolean;
