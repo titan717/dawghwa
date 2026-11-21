@@ -65,18 +65,21 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 | Avatar with cosmetic frame | `src/components/ProfileAvatar.tsx` (`.pavatar*`) | n/a |
 | Segmented control | `src/components/Segmented.tsx` (`.segmented`) | n/a |
 | Comments sheet / list / composer | `src/components/Comments.tsx` (`.cm*`) | n/a |
-| Reader top bar (auto-hide, scrubber), zoom, "what's next" card, reward beat | `src/routes/Reader.tsx`, `src/lib/readerGestures.ts` (`.rd-top`, `.rd-pan`, `.rd-wn`, `.rd-beat`) | WEBTOON viewer |
+| Reader controls (auto-hide, scrubber), zoom, "what's next" card, reward beat | `src/routes/Reader.tsx`, `src/lib/readerGestures.ts` (`.rd-top`, `.rd-pan`, `.rd-wn`, `.rd-beat`) | WEBTOON viewer |
 | Series progress ring on cards | `ProgressRing` + `useSeriesFraction` (`.card-ring`, `.continue-ring`) | n/a |
 | Achievements page | `src/routes/Achievements.tsx` (`.ach-*`, `.badge-grid`) | n/a |
 | Sign-in ("Who's reading?", PIN pad) | `src/components/SignIn.tsx` (`.signin*`) | n/a |
 | Monthly recap | `src/routes/Profile.tsx` (`.recap*`) | n/a |
 | Reader card sheet and PNG | `src/lib/profile/card.ts`, `Profile.tsx` (`.reader-card*`) | n/a |
 
-## Layout breakpoints
+## Layout and navigation
 
-- Under 600px: phone. Bottom nav with 5 labelled items, a topbar with brand, search and avatar, and a 4:5 hero.
-- 600 to 1023px: tablet. The bottom nav is centred (up to 120px per item) and the hero is 4:3.
-- 1024px and up: desktop. Sidebar navigation (with History and shortcuts), the header search box aligned to the 1440px content column, and a hero with blurred key art and the cover on the right.
+- The bottom navigation is the only persistent global navigation at every width. Do not add a competing desktop sidebar or a global top bar.
+- Page headings and contextual controls belong inside each screen. Reader and title-page controls are local to those experiences, not global chrome.
+- Under 600px: phone. Keep the five labelled bottom-nav destinations readable and make room for reader controls and safe areas; the hero is 4:5.
+- 600 to 1023px: tablet. Centre the bottom navigation (up to 120px per item); the hero is 4:3.
+- 1024px and up: desktop. Keep the bottom navigation as the sole persistent navigation. Let catalogue and reading content use the wider canvas without introducing a sidebar; the hero uses blurred key art with the cover on the right.
+- At every width, preserve a clear active destination, keyboard focus, and sufficient space above the bottom navigation so it never covers focused controls.
 
 ## Content rules
 

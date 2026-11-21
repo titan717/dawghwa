@@ -199,10 +199,23 @@ function keepLocal(r: SearchResult, q: BrowseQuery, local: string[]): boolean {
   return true;
 }
 
+/** Whether a browse request needs the catalogue's filter vocabulary/capabilities. */
+export function needsCatalogFilters(q: BrowseQuery): boolean {
+  return Boolean(
+    q.includedTags?.length ||
+    q.excludedTags?.length ||
+    q.demographic?.length ||
+    (q.kinds?.length ?? 0) > 1 ||
+    (q.status?.length ?? 0) > 1,
+  );
+}
+
 export async function browseCatalog(q: BrowseQuery, o: Opt = {}): Promise<BrowseResponse & { attribution?: CatalogResponse["attribution"]; filteredLocally: number }> {
-  const f = await catalogFilters(o);
-  const genres = new Set(f.genres.map((g) => g.toLowerCase()));
-  const server: ServerFilters = new Set(f.capabilities.filters);
+  // Keep the first catalogue request fast for the common, unfiltered browse/search path.
+  // Vocabulary is only needed to classify tags or negotiate server filter capabilities.
+  const f = needsCatalogFilters(q) ? await catalogFilters(o) : undefined;
+  const genres = new Set(f?.genres.map((g) => g.toLowerCase()) ?? []);
+  const server: ServerFilters = new Set(f?.capabilities.filters ?? []);
   const params = toCatalogParams(q, genres, server);
   const res = await request<CatalogResponse>(`/api/catalog?${params}`, { signal: o.signal, timeoutMs: 20_000 });
   const all = res.items.map(toResult);

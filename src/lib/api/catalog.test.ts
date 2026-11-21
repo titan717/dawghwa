@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
 import raw from "@/test/fixtures/catalog.json";
 import type { BrowseQuery } from "./types";
-import { localOnly, toCatalogParams, toResult, UnsupportedFilterError, type CatalogItem } from "./catalog";
+import { localOnly, needsCatalogFilters, toCatalogParams, toResult, UnsupportedFilterError, type CatalogItem } from "./catalog";
 
 const items = (raw as unknown as { items: CatalogItem[] }).items;
 const genres = new Set(["action", "fantasy", "romance"]);
 
 describe("catalogue adapter", () => {
+  it("only loads filter vocabulary when the query needs it", () => {
+    expect(needsCatalogFilters({ query: "solo" })).toBe(false);
+    expect(needsCatalogFilters({ kinds: ["manhwa"], status: ["ongoing"] })).toBe(false);
+    expect(needsCatalogFilters({ includedTags: ["Action"] })).toBe(true);
+    expect(needsCatalogFilters({ excludedTags: ["Harem"] })).toBe(true);
+    expect(needsCatalogFilters({ demographic: ["seinen"] })).toBe(true);
+    expect(needsCatalogFilters({ kinds: ["manga", "manhwa"] })).toBe(true);
+    expect(needsCatalogFilters({ status: ["ongoing", "hiatus"] })).toBe(true);
+  });
+
   it("translates a browse query to documented /api/catalog params", () => {
     const p = toCatalogParams({ kinds: ["manhwa"], status: ["completed"], includedTags: ["Action", "Monsters"], excludedTags: ["Harem"], order: "rating", year: 2020, offset: 60, limit: 30 }, genres);
     expect(p.get("provider")).toBe("mangadex");

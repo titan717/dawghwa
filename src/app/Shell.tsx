@@ -1,25 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useSyncExternalStore } from "react";
-import {
-  NavLink,
-  Outlet,
-  ScrollRestoration,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-import {
-  Award,
-  BookOpen,
-  Compass,
-  History,
-  Home,
-  Search,
-  User,
-  WifiOff,
-  CloudOff,
-  RefreshCw,
-} from "lucide-react";
-import { Brand } from "@/components/Brand";
-import { ProfileAvatar } from "@/components/ProfileAvatar";
+import { NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from "react-router-dom";
+import { Award, BookOpen, Compass, Home, Search, User, WifiOff, CloudOff, RefreshCw } from "lucide-react";
 import { Toasts } from "@/components/Toast";
 import { Celebrations } from "@/components/Celebrate";
 import { useSettings } from "@/lib/settings";
@@ -45,11 +26,7 @@ const PROFILE: NavItem = { to: "/profile", label: "Profile", icon: User };
 export const navItems = (rewards: boolean): NavItem[] => [HOME, SEARCH, LIBRARY, rewards ? AWARDS : DISCOVER, PROFILE];
 
 function useApiHealth() {
-  return useSyncExternalStore(
-    apiHealth.subscribe,
-    apiHealth.get,
-    apiHealth.get,
-  );
+  return useSyncExternalStore(apiHealth.subscribe, apiHealth.get, apiHealth.get);
 }
 
 export function Shell() {
@@ -57,29 +34,20 @@ export function Shell() {
   const nav = useNavigate();
   const online = useOnline();
   const health = useApiHealth();
-  const update = useSyncExternalStore(
-    updateReady.subscribe,
-    updateReady.get,
-    updateReady.get,
-  );
+  const update = useSyncExternalStore(updateReady.subscribe, updateReady.get, updateReady.get);
   const profile = useUser((s) => s.profile);
   const { rewards } = useSettings();
   const NAV = navItems(rewards);
   const ready = useUser((s) => s.ready);
   const locked = useSignInRequired();
   useEffect(() => {
-    // Reward moments are optional and lazy: the engine stays out of the initial bundle.
     if (ready) void import("@/lib/rewards/runtime").then((m) => m.startRewards());
   }, [ready]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      const typing =
-        t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
-      if (
-        (e.key === "k" && (e.metaKey || e.ctrlKey)) ||
-        (e.key === "/" && !typing)
-      ) {
+      const typing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) {
         e.preventDefault();
         nav("/search");
       }
@@ -87,129 +55,46 @@ export function Shell() {
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [nav]);
-  // Title pages bring their own header and sticky read button on phones (blueprint), so the shell steps aside there.
   const immersive = loc.pathname.startsWith("/title/");
-  // Decided once per location: leaving the landing sets the "entered" flag before the
-  // router finishes loading the next screen, and a re-render of "/" in between must not
-  // swap in Home (whose onboarding redirect would drop the hand-off query).
   const landing = useMemo(() => loc.pathname === "/" && shouldShowLanding(profile, loc.search), [loc.key]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Anyone who has reached a screen inside the app (a deep link, /welcome, a shared
-  // title) has entered it; the landing is only for a first visit to the bare root.
   useEffect(() => {
     if (!landing) markEntered();
   }, [landing]);
   if (locked) return <SignIn />;
-  // First-time web visitors meet the landing page at "/" (src/app/landing.ts).
-  if (landing)
-    return (
-      <Suspense fallback={null}>
-        <Landing />
-      </Suspense>
-    );
+  if (landing) return <Suspense fallback={null}><Landing /></Suspense>;
+
   return (
-    <div className="shell" data-own-chrome={immersive || undefined}>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <aside className="sidebar" aria-label="Primary">
-        <NavLink to="/" aria-label="Dawghwa home">
-          <Brand />
-        </NavLink>
-        <nav>
-          {NAV.map(({ to, label, icon: Icon, end, aria }) => (
-            <NavLink key={to} to={to} end={end}>
-              <Icon size={19} strokeWidth={1.9} />
-              {aria ?? label}
-            </NavLink>
-          ))}
-          {rewards && (
-            <NavLink to="/discover">
-              <Compass size={19} strokeWidth={1.9} />
-              Discover
-            </NavLink>
-          )}
-          <NavLink to="/history">
-            <History size={19} strokeWidth={1.9} />
-            History
-          </NavLink>
-        </nav>
-        <div className="sidebar-section">Shortcuts</div>
-        <NavLink className="side-link" to="/discover?order=rating">
-          Top rated
-        </NavLink>
-        <NavLink className="side-link" to="/discover?status=completed">
-          Completed series
-        </NavLink>
-        <NavLink className="side-link" to="/discover?kind=manhwa&order=latest">
-          New manhwa chapters
-        </NavLink>
-        <div className="sidebar-foot">
-          {profile && (
-            <NavLink
-              to="/profile"
-              className="side-link"
-              style={{ minHeight: 52 }}
-            >
-              <ProfileAvatar profile={profile} size={34} />
-              <span>
-                {profile.name}
-                <span
-                  className="dim"
-                  style={{ display: "block", fontSize: 11 }}
-                >
-                  Stored on this device
-                </span>
-              </span>
-            </NavLink>
-          )}
-        </div>
-      </aside>
+    <div className="shell" data-own-chrome={immersive || undefined} style={{ display: "block" }}>
+      <a className="skip-link" href="#main">Skip to content</a>
       <div className="main">
         {!online ? (
           <div className="banner banner-warn" role="status">
-            <WifiOff size={16} /> You're offline. Library, history and saved
-            data still work; new content will load when you reconnect.
+            <WifiOff size={16} /> You're offline. Library, history and saved data still work; new content will load when you reconnect.
           </div>
         ) : health === "unreachable" ? (
           <div className="banner banner-warn" role="status">
-            <CloudOff size={16} /> The Dawghwa service isn't responding right
-            now. Showing what's saved on this device.
+            <CloudOff size={16} /> The Dawghwa service isn't responding right now. Showing what's saved on this device.
           </div>
         ) : null}
         {update && (
           <div className="banner" role="status">
             <RefreshCw size={16} /> A new version of Dawghwa is ready.
-            <button className="btn btn-sm btn-primary" onClick={applyUpdate}>
-              Update
-            </button>
+            <button className="btn btn-sm btn-primary" onClick={applyUpdate}>Update</button>
           </div>
         )}
-        <main id="main" tabIndex={-1}>
-          <Outlet />
-        </main>
+        <main id="main" tabIndex={-1}><Outlet /></main>
         {(loc.pathname === "/" || loc.pathname === "/about") && (
           <footer className="site-foot">
-            <span>
-              Dawghwa does not host content. Titles, covers and chapters come
-              from their providers through Dawghwa.
-            </span>
-            <a
-              href="https://github.com/Titan717/dawghwa"
-              rel="noopener"
-              target="_blank"
-            >
-              Source
-            </a>
+            <span>Dawghwa does not host content. Titles, covers and chapters come from their providers through Dawghwa.</span>
+            <a href="https://github.com/Titan717/dawghwa" rel="noopener" target="_blank">Source</a>
             <NavLink to="/about">About and credits</NavLink>
           </footer>
         )}
       </div>
-      <nav className="bottomnav" aria-label="Primary">
+      <nav className="bottomnav" aria-label="Primary" style={{ display: "grid" }}>
         {NAV.map(({ to, label, icon: Icon, end, aria }) => (
           <NavLink key={to} to={to} end={end} aria-label={aria ? `${label}: ${aria}` : undefined}>
-            <span className="nav-ico">
-              <Icon size={21} strokeWidth={2} />
-            </span>
+            <span className="nav-ico"><Icon size={21} strokeWidth={2} /></span>
             {label}
           </NavLink>
         ))}

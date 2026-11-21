@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Award, Download, Lock, LogOut, Plus, RotateCcw, Share2, Trash2, Upload } from "lucide-react";
-import { Avatar } from "@/components/Avatar";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Segmented } from "@/components/Segmented";
 import { Kicker } from "@/components/Editorial";
 import { MascotSays } from "@/components/Mascot";
 import { ProfileSkeleton } from "@/components/States";
 import { readingStats, type ReadingStats } from "@/lib/profile/stats";
+import { avatarFileToDataUrl } from "@/lib/profile/avatar";
 import { LevelMascot } from "@/components/LevelMascot";
 import { useProgression } from "@/lib/rewards";
 import { genrePath } from "@/lib/genres";
@@ -17,7 +17,7 @@ import { useHead } from "@/lib/seo";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { createProfile, deleteProfile, switchProfile, unhideTitle, updateProfile, useUser } from "@/lib/store/user";
 import { isMemoryStorage } from "@/lib/store/db";
-import { downloadJson, exportProfile, importProfile } from "@/lib/store/transfer";
+import { downloadJson, exportProfile, importProfile, MAX_TRANSFER_FILE_BYTES } from "@/lib/store/transfer";
 import { resetIntel, useIntel } from "@/lib/intel/runtime";
 import { evidence } from "@/lib/intel/learner";
 import { featureLabel } from "@/lib/intel/features";
@@ -337,6 +337,8 @@ export default function Profile() {
   const settings = useSettings();
   const nav = useNavigate();
   const file = useRef<HTMLInputElement>(null);
+  const avatarFile = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [name, setName] = useState("");
   const [confirm, setConfirm] = useState<null | "reset" | "delete">(null);
@@ -434,7 +436,7 @@ export default function Profile() {
         <div className="chips">
           {profiles.map((p) => (
             <button key={p.id} className="chip" aria-pressed={p.id === profile.id} onClick={() => void switchProfile(p.id).then(() => toast(`Switched to ${p.name}`))}>
-              <Avatar name={p.name} color={p.color} size={28} />
+              <ProfileAvatar profile={p} size={28} />
               {p.name}
             </button>
           ))}
@@ -446,6 +448,62 @@ export default function Profile() {
           <span>Name</span>
           <input className="input" defaultValue={profile.name} key={profile.id} maxLength={40} onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== profile.name && void updateProfile({ name: e.target.value.trim() })} />
         </label>
+        <div className="field" style={{ marginTop: 16 }}>
+          <span id="profile-avatar-label">Profile avatar</span>
+          <p className="hint" id="profile-avatar-hint">Stored on this device only; included only in manual profile exports. GIF, PNG, JPEG or WebP, up to 1.5 MB and 1024 pixels per edge.</p>
+          <div className="cluster" style={{ marginTop: 8 }}>
+            <ProfileAvatar profile={profile} size={40} />
+            <input
+              ref={avatarFile}
+              type="file"
+              accept="image/gif,image/png,image/jpeg,image/webp"
+              hidden
+              disabled={avatarBusy}
+              aria-label="Choose a profile avatar"
+              aria-describedby="profile-avatar-hint"
+              onChange={async (e) => {
+                const input = e.currentTarget;
+                const selected = input.files?.[0];
+                input.value = "";
+                if (!selected) return;
+                setAvatarBusy(true);
+                try {
+                  await updateProfile({ avatar: await avatarFileToDataUrl(selected) });
+                  toast("Avatar updated on this device");
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : "Avatar update failed");
+                } finally {
+                  setAvatarBusy(false);
+                }
+              }}
+            />
+            <button className="btn btn-sm" type="button" disabled={avatarBusy} aria-describedby="profile-avatar-hint" onClick={() => avatarFile.current?.click()}>
+              {avatarBusy ? "Saving…" : profile.avatar ? "Change avatar" : "Add avatar"}
+            </button>
+            {profile.avatar && (
+              <button
+                className="btn btn-sm btn-ghost"
+                type="button"
+                disabled={avatarBusy}
+                aria-describedby="profile-avatar-hint"
+                onClick={async () => {
+                  setAvatarBusy(true);
+                  try {
+                    await updateProfile({ avatar: undefined });
+                    toast("Avatar removed from this device");
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : "Avatar removal failed");
+                  } finally {
+                    setAvatarBusy(false);
+                  }
+                }}
+              >
+                Remove avatar
+              </button>
+            )}
+          </div>
+          <span className="hint" role="status" aria-live="polite">{avatarBusy ? "Updating avatar…" : ""}</span>
+        </div>
         <label className="switch settings-row">
           <span>
             <span className="label">Personalised recommendations</span>
@@ -538,7 +596,18 @@ export default function Profile() {
           Everything is stored on this device{isNative() ? ` (${platformName()})` : " in this browser"}. Export to back up or move to another device.
         </p>
         <div className="cluster" style={{ marginTop: 12 }}>
-          <button className="btn" onClick={() => void exportProfile().then((d) => downloadJson(`dawghwa-${profile.name.replace(/\W+/g, "-").toLowerCase()}.json`, d))}>
+          <button
+            className="btn"
+            onClick={async () => {
+              try {
+                const data = await exportProfile();
+                downloadJson(`dawghwa-${profile.name.replace(/\W+/g, "-").toLowerCase()}.json`, data);
+                toast("Profile exported");
+              } catch (err) {
+                toast(err instanceof Error ? err.message : "Profile export failed");
+              }
+            }}
+          >
             <Download size={16} /> Export profile
           </button>
           <button className="btn" onClick={() => file.current?.click()}>
@@ -554,6 +623,7 @@ export default function Profile() {
               e.target.value = "";
               if (!f) return;
               try {
+                if (f.size > MAX_TRANSFER_FILE_BYTES) throw new Error("Profile import files must be 100 MiB or smaller.");
                 const p = await importProfile(await f.text());
                 toast(`Imported as ${p.name}`);
               } catch (err) {

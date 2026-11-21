@@ -3,6 +3,9 @@ import { getUser, newProfile, switchProfile } from "./user";
 import type { Title } from "../titles";
 import { MAX_COMMENT } from "../comments";
 import { questSeedOf } from "../rewards/quests";
+import { isSafeAvatarDataUrl } from "../profile/avatar";
+
+export const MAX_TRANSFER_FILE_BYTES = 100 * 1024 * 1024;
 
 /**
  * Profile export / import as a portable JSON document. This is also the
@@ -43,9 +46,14 @@ export async function exportProfile(profileId = getUser().profile?.id): Promise<
     const { cachedAt: _c, ...rest } = t as Title & { cachedAt?: number };
     return rest;
   });
-  const { id: _id, ...rest } = profile;
-  // carry the (derived, not the raw id) quest seed so the imported profile keeps the same weekly quests
-  const p = { ...rest, questSeed: questSeedOf(profile) };
+  const { id: _id, avatar: storedAvatar, ...rest } = profile;
+  // Export only bounded inline avatar data; never preserve a tampered remote URL.
+  const p = {
+    ...rest,
+    ...(isSafeAvatarDataUrl(storedAvatar) ? { avatar: storedAvatar } : {}),
+    // carry the (derived, not the raw id) quest seed so the imported profile keeps the same weekly quests
+    questSeed: questSeedOf(profile),
+  };
   return { format: "dawghwa-profile", version: 2, exportedAt: new Date().toISOString(), profile: p, library: strip(library), progress: strip(progress), hidden: strip(hidden), events: strip(events), comments: strip(comments), titles };
 }
 
@@ -56,6 +64,7 @@ function isExport(x: unknown): x is ProfileExport {
 
 /** Import as a new profile (never merges into or overwrites an existing one). */
 export async function importProfile(json: string): Promise<ProfileRecord> {
+  if (json.length > MAX_TRANSFER_FILE_BYTES) throw new Error("Profile import files must be 100 MiB or smaller.");
   let data: unknown;
   try {
     data = JSON.parse(json);
@@ -64,7 +73,8 @@ export async function importProfile(json: string): Promise<ProfileRecord> {
   }
   if (!isExport(data)) throw new Error("That file isn't a Dawghwa profile export.");
   const base = newProfile(data.profile.name || "Imported", getUser().profiles.length);
-  const profile: ProfileRecord = { ...base, name: `${data.profile.name || "Imported"}`.slice(0, 40), color: data.profile.color || base.color, onboarded: true, prefs: { ...base.prefs, ...data.profile.prefs }, cosmetics: data.profile.cosmetics, rhythm: data.profile.rhythm, pin: validPin(data.profile.pin), questSeed: typeof data.profile.questSeed === "string" && data.profile.questSeed ? data.profile.questSeed.slice(0, 64) : base.questSeed };
+  const importedAvatar = isSafeAvatarDataUrl(data.profile.avatar) ? data.profile.avatar : undefined;
+  const profile: ProfileRecord = { ...base, name: `${data.profile.name || "Imported"}`.slice(0, 40), color: data.profile.color || base.color, onboarded: true, prefs: { ...base.prefs, ...data.profile.prefs }, cosmetics: data.profile.cosmetics, rhythm: data.profile.rhythm, pin: validPin(data.profile.pin), questSeed: typeof data.profile.questSeed === "string" && data.profile.questSeed ? data.profile.questSeed.slice(0, 64) : base.questSeed, ...(importedAvatar ? { avatar: importedAvatar } : {}) };
   const pid = profile.id;
   const d = await db();
   const tx = d.transaction(["profiles", "library", "progress", "hidden", "events", "comments"], "readwrite");
@@ -87,7 +97,10 @@ function validPin(p: unknown): ProfileRecord["pin"] {
 }
 
 export function downloadJson(name: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const json = JSON.stringify(data, null, 2);
+  if (typeof json !== "string") throw new Error("The profile could not be serialized.");
+  const blob = new Blob([json], { type: "application/json" });
+  if (blob.size > MAX_TRANSFER_FILE_BYTES) throw new Error("Profile exports must be 100 MiB or smaller.");
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
