@@ -9,6 +9,8 @@ Review of Dawghwa (this repo) and Dawghwa API (`titan717/dawghwa.api`) against t
 | [gap-matrix.md](gap-matrix.md) | Feature gaps with dependencies, cost, risk, tests and priority |
 | [pr6-review.md](pr6-review.md) | Review of API PR #6 and app PR #20: nine confirmed findings, with fixes and regression tests |
 | [plan.md](plan.md) | Phases A–E and the approvals each one needs |
+| [providers-2026-11.md](providers-2026-11.md) | Phase 4: 12 titles × 8 Dawghwa providers via the live API, match status vs chapter verification, and Title page provider-display patterns |
+| [providers-comix-ws-terms.md](providers-comix-ws-terms.md) | comix.ws robots.txt (verbatim) and the 403 outcome for its terms and DMCA pages |
 | [validation.md](validation.md) | Checks that were run, with results, and checks proposed but not run |
 
 ## How the skills were applied
