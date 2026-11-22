@@ -1,5 +1,6 @@
 import { celebrate } from "@/components/Celebrate";
 import { getSettings } from "../settings";
+import { isIncognito } from "../store/incognito";
 import { getUser, onSignal, subscribeUser, type UserState } from "../store/user";
 import { gains, progressionFor, type Gains, type Progression, type Quest } from "./index";
 import { newlyUnlocked, type Cosmetic } from "./cosmetics";
@@ -60,10 +61,10 @@ export function startRewards() {
     }
     const fresh = [...now].filter((c) => !done.has(c));
     done = new Set([...done, ...now]);
-    if (fresh.length && getSettings().rewards) celebrate({ kind: "series", title: `Collection complete: ${fresh[0]}`, detail: "Every series in it is finished.", mascot: true });
+    if (fresh.length && getSettings().rewards && !isIncognito()) celebrate({ kind: "series", title: `Collection complete: ${fresh[0]}`, detail: "Every series in it is finished.", mascot: true });
   });
   onSignal((e) => {
-    if (!RELEVANT.has(e.kind) || !getSettings().rewards) return;
+    if (!RELEVANT.has(e.kind) || !getSettings().rewards || isIncognito()) return;
     const s = getUser();
     const before = progressionFor(s, s.events.filter((x) => x.seq !== e.seq));
     const after = progressionFor(s);
