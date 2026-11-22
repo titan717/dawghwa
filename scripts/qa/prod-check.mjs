@@ -12,14 +12,14 @@ for (const vp of [{ n: "m", width: 390, height: 844, mobile: true }, { n: "d", w
   p.on("requestfailed", (r) => { const k = `ERR ${new URL(r.url()).host}`; hosts[k] = (hosts[k] ?? 0) + 1; });
   await p.goto(BASE + "/");
   await p.waitForURL(/welcome/);
-  await p.getByRole("button", { name: "Skip" }).click();
+  await p.getByRole("button", { name: "Cancel" }).click();
   await p.waitForURL(/\/$/);
   await p.waitForTimeout(7000);
   const hero = await p.locator(".hero-slide h2, .hero-slide .hero-title").first().textContent().catch(() => null);
   const cards = await p.locator("a[href^='/title/']").count();
   await p.screenshot({ path: `${out}-${vp.n}-home.png` });
   await p.goto(BASE + "/library");
-  const lib = await p.getByRole("heading", { level: 1, name: "Library" }).waitFor({ timeout: 15000 }).then(() => true, () => false);
+  const lib = await p.getByRole("heading", { level: 1, name: "My Series" }).waitFor({ timeout: 15000 }).then(() => true, () => false);
   await p.goto(BASE + "/title/mangadex/77bee52c-d2d6-44ad-a33a-1734c1fe696a");
   await p.waitForTimeout(6000);
   const h1 = await p.locator("h1").first().textContent();

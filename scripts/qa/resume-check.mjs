@@ -7,7 +7,7 @@ const ctx = await browser.newContext({ serviceWorkers: "block", viewport: { widt
 await ctx.route((u) => !u.hostname.includes("localhost") && !u.hostname.includes("fonts"), async (route) => { try { const r = await fetch(route.request().url()); await route.fulfill({ status: r.status, contentType: r.headers.get("content-type") ?? "image/jpeg", body: Buffer.from(await r.arrayBuffer()) }); } catch { await route.abort(); } });
 const page = await ctx.newPage();
 await page.goto(base + "/welcome");
-await page.getByRole("button", { name: "Skip" }).click();
+await page.getByRole("button", { name: "Cancel" }).click();
 await page.waitForTimeout(500);
 await page.goto(base + reader);
 await page.waitForTimeout(6000);

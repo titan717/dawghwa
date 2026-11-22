@@ -7,7 +7,6 @@ import {
   useNavigate,
 } from "react-router-dom";
 import {
-  Award,
   BookOpen,
   Compass,
   History,
@@ -33,16 +32,18 @@ import { markEntered, shouldShowLanding } from "./landing";
 
 const Landing = lazy(() => import("@/routes/Landing"));
 
-type NavItem = { to: string; label: string; icon: typeof Home; end?: boolean; aria?: string };
-const HOME: NavItem = { to: "/", label: "Home", icon: Home, end: true };
+type NavItem = { to: string; label: string; icon: typeof Home; end?: boolean; aria?: string; fill?: boolean };
+const HOME: NavItem = { to: "/", label: "Home", icon: Home, end: true, fill: true };
 const SEARCH: NavItem = { to: "/search", label: "Search", icon: Search };
-const LIBRARY: NavItem = { to: "/library", label: "Library", icon: BookOpen };
-const AWARDS: NavItem = { to: "/achievements", label: "Awards", icon: Award, aria: "Achievements" };
+const LIBRARY: NavItem = { to: "/library", label: "My Series", icon: BookOpen, fill: true };
 const DISCOVER: NavItem = { to: "/discover", label: "Discover", icon: Compass };
-const PROFILE: NavItem = { to: "/profile", label: "Profile", icon: User };
+const PROFILE: NavItem = { to: "/profile", label: "Profile", icon: User, fill: true };
 
-/** Five slots (docs/DECISIONS.md D7). With Rewards off the Awards slot gives way to Discover. */
-export const navItems = (rewards: boolean): NavItem[] => [HOME, SEARCH, LIBRARY, rewards ? AWARDS : DISCOVER, PROFILE];
+/**
+ * Five slots, in the v2 blueprint order. Streak, XP and level live on the profile card,
+ * not in the main navigation, so the slots are the same with Rewards on or off.
+ */
+export const navItems = (_rewards?: boolean): NavItem[] => [HOME, DISCOVER, SEARCH, LIBRARY, PROFILE];
 
 function useApiHealth() {
   return useSyncExternalStore(
@@ -122,12 +123,6 @@ export function Shell() {
               {aria ?? label}
             </NavLink>
           ))}
-          {rewards && (
-            <NavLink to="/discover">
-              <Compass size={19} strokeWidth={1.9} />
-              Discover
-            </NavLink>
-          )}
           <NavLink to="/history">
             <History size={19} strokeWidth={1.9} />
             History
@@ -205,10 +200,10 @@ export function Shell() {
         )}
       </div>
       <nav className="bottomnav" aria-label="Primary">
-        {NAV.map(({ to, label, icon: Icon, end, aria }) => (
+        {NAV.map(({ to, label, icon: Icon, end, aria, fill }) => (
           <NavLink key={to} to={to} end={end} aria-label={aria ? `${label}: ${aria}` : undefined}>
             <span className="nav-ico">
-              <Icon size={21} strokeWidth={2} />
+              <Icon size={23} strokeWidth={1.7} className={fill ? "fillable" : undefined} />
             </span>
             {label}
           </NavLink>

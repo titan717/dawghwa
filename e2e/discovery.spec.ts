@@ -38,7 +38,8 @@ test("shelf arrows land on a card edge", async ({ page, isMobile }) => {
   test.skip(!(await apiUp(page)), "API not running");
   await skipOnboarding(page);
   await page.goto("/");
-  const row = page.locator("section.row:not(.row-ranked)").filter({ has: page.locator(".row-track .card") }).first();
+  // rails with pointer arrows (the blueprint Binge row is a custom shelf without them)
+  const row = page.locator("section.row:not(.row-ranked)").filter({ has: page.locator(".row-track .card") }).filter({ has: page.locator(".row-nav") }).first();
   await expect(row).toBeAttached({ timeout: 20_000 });
   await row.scrollIntoViewIfNeeded();
   await row.hover();

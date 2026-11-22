@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Dices, Play, RefreshCw, Sparkles, Timer } from "lucide-react";
+import { Dices, Play, RefreshCw, Shuffle } from "lucide-react";
 import { Row, SectionHead } from "@/components/Row";
-import { ChapterNo, LeadCard, WideCard } from "@/components/Editorial";
+import { ChapterNo } from "@/components/Editorial";
 import { Hero } from "@/components/Hero";
-import { CategoryShelf } from "@/components/CategoryShelf";
 import { TitleCard } from "@/components/TitleCard";
 import { Cover } from "@/components/Cover";
 import { ErrorState, RowSkeleton } from "@/components/States";
@@ -76,35 +75,15 @@ function useClaimed(claims: Claims, order: number) {
   return claims.before(order);
 }
 
+const RANK_LABEL: Record<string, string> = { trending: "this year", "top-rated": "top rated" };
+
+/** Blueprint v2: every catalogue section is a cover rail with a bold title and a chevron. */
 function SectionBody({ def, items }: { def: SectionDef; items: Title[] }) {
-  if (def.layout === "spread") {
-    const [lead, ...rest] = items;
-    return (
-      <section className="section spread" aria-labelledby={`row-${def.id}`}>
-        <SectionHead id={def.id} title={def.title} subtitle={def.subtitle} more={def.more} />
-        <div className="spread-grid">
-          <LeadCard title={lead!} label={def.id === "hidden-gems" ? "Hidden gem" : def.id === "completed" ? "Finished" : undefined} />
-          <div className="spread-rest">
-            {rest.slice(0, 6).map((t) => (
-              <TitleCard key={t.key} title={t} context={def.id} />
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-  if (def.layout === "wide")
-    return (
-      <Row id={def.id} title={def.title} subtitle={def.subtitle} more={def.more} className="row-wide">
-        {items.slice(0, 16).map((t) => (
-          <WideCard key={t.key} title={t} />
-        ))}
-      </Row>
-    );
+  const ranked = def.layout === "ranked";
   return (
-    <Row id={def.id} title={def.title} subtitle={def.subtitle} more={def.more} ranked={def.layout === "ranked"}>
+    <Row id={def.id} title={def.title} subtitle={def.subtitle} more={def.more}>
       {items.map((t, i) => (
-        <TitleCard key={t.key} title={t} context={def.id} variant={def.layout === "ranked" ? "ranked" : "card"} rank={i + 1} />
+        <TitleCard key={t.key} title={t} context={def.id} sub={ranked && i < 20 ? `#${i + 1} ${RANK_LABEL[def.id] ?? ""}`.trim() : undefined} badge={def.id === "new-chapters" ? "New Chapter" : undefined} />
       ))}
     </Row>
   );
@@ -272,19 +251,100 @@ function usePools(ctx: RankContext) {
   }, [a, b, c, d]);
 }
 
-function PickedForYou({ ctx, pool, seed }: { ctx: RankContext; pool: Title[]; seed: number }) {
+/** Short green sublabel for the Top Picks grid, from the recommender's real reason. */
+function shortReason(text?: string) {
+  if (!text) return undefined;
+  const m = /^Because you enjoy (.+)$/.exec(text) ?? /^You picked (.+) during setup$/.exec(text);
+  if (m) return m[1]!.replace(/^./, (c) => c.toUpperCase());
+  const sim = /^Similar to (.+)$/.exec(text);
+  if (sim) return `Like ${sim[1]}`;
+  if (text.startsWith("From ")) return "Same creator";
+  if (text.includes("completed")) return "Completed series";
+  if (text.startsWith("Something different")) return "Something new";
+  return undefined;
+}
+
+/**
+ * Blueprint "Top Picks for You": a 3-column cover grid, each with a green line
+ * saying why it is there. Personal once the profile has picks or reading
+ * evidence; before that, the most-followed titles labelled with their real
+ * rank inside their main genre ("#3 in Romance").
+ */
+function TopPicks({ ctx, pool, seed, loading }: { ctx: RankContext; pool: Title[]; seed: number; loading?: boolean }) {
   const e = ctx.state ? evidence(ctx.state) : 0;
-  const hasPrefs = Boolean(ctx.prefs?.genres.length || ctx.prefs?.kinds.length);
-  const picks = useMemo(() => (pool.length ? rank(pool, { ...ctx, explore: 0.15 }, { k: 24, lambda: 0.72, exploreEvery: 6 }) : []), [pool, ctx, seed]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => noteShown(picks.slice(0, 8).map((p) => p.title.key)), [picks]);
-  if (!e && !hasPrefs) return null;
-  if (picks.length < MIN_ROW) return null;
+  const personal = e > 0 || Boolean(ctx.prefs?.genres.length || ctx.prefs?.kinds.length);
+  const picks = useMemo(() => {
+    if (!pool.length) return [];
+    const genreRank = new Map<string, number>();
+    const rankIn = new Map<string, string>();
+    for (const t of [...pool].sort((a, b) => (b.follows ?? 0) - (a.follows ?? 0))) {
+      const g = t.meta?.genres?.[0];
+      if (!g) continue;
+      const n = (genreRank.get(g) ?? 0) + 1;
+      genreRank.set(g, n);
+      rankIn.set(t.key, n <= 20 ? `#${n} in ${g}` : g);
+    }
+    const list = personal ? rank(pool, { ...ctx, explore: 0.15 }, { k: 12, lambda: 0.72, exploreEvery: 6 }) : rerankRow(pool.filter((t) => !isMature(t)), ctx).slice(0, 12).map((t) => ({ title: t, reason: undefined }) as unknown as Scored);
+    return list.map((p) => ({ t: p.title, sub: shortReason(p.reason?.text) ?? rankIn.get(p.title.key) ?? p.title.meta?.genres?.[0] }));
+  }, [pool, ctx, personal, seed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => noteShown(picks.slice(0, 6).map((p) => p.t.key)), [picks]);
+  if (picks.length < 6 && loading)
+    return (
+      <section className="section top-picks" aria-busy="true" aria-label="Loading top picks">
+        <SectionHead id="picked" title="Top Picks for You" />
+        <div className="pick-grid">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="cover skeleton" />
+          ))}
+        </div>
+      </section>
+    );
+  if (picks.length < 6) return null;
   return (
-    <Row id="picked" title="Picked for you" subtitle={e > 0.3 ? "Learned on this device from what you read and save" : "From the genres you chose. Gets sharper as you read"}>
-      {picks.map((p: Scored) => (
-        <TitleCard key={p.title.key} title={p.title} reason={p.reason?.text} context="picked" />
-      ))}
-    </Row>
+    <section className="section top-picks" aria-labelledby="row-picked">
+      <SectionHead id="picked" title="Top Picks for You" subtitle={personal ? (e > 0.3 ? "Learned on this device from what you read and save" : "From the genres you chose. Gets sharper as you read") : "Most-followed series, with their rank in their main genre"} />
+      <div className="pick-grid">
+        {picks.slice(0, 12).map(({ t, sub }, i) => (
+          <TitleCard key={t.key} title={t} sub={sub} context="picked" eager={i < 3} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const BINGE_GENRES = ["All", "Fantasy", "Romance", "Action", "Drama", "Comedy", "Thriller"];
+
+/** Blueprint "Binge the Entire Series": completed series, filtered by genre chips. */
+function BingeRow({ ctx, preferred = [] }: { ctx: RankContext; preferred?: string[] }) {
+  const genres = useMemo(() => ["All", ...new Set([...preferred.filter((g) => BINGE_GENRES.includes(g)), ...BINGE_GENRES.slice(1)])], [preferred]);
+  const [genre, setGenre] = useState("All");
+  const q = useBrowse({ order: "popular", limit: 30, status: ["completed"], includedTags: genre === "All" ? undefined : [genre] });
+  const items = useMemo(() => rerankRow(q.data?.items ?? [], ctx).slice(0, 20), [q.data, ctx]);
+  const more = `/discover?status=completed${genre === "All" ? "" : `&tag=${encodeURIComponent(genre)}`}`;
+  return (
+    <section className="section row binge" aria-labelledby="row-binge">
+      <SectionHead id="binge" title="Binge the Entire Series" subtitle="Completed series, most followed first" more={more} />
+      <div className="chip-rail" role="group" aria-label="Genre">
+        {genres.map((g) => (
+          <button key={g} className="chip" aria-pressed={g === genre} onClick={() => setGenre(g)}>
+            {g}
+          </button>
+        ))}
+      </div>
+      {q.isError && !q.data ? (
+        <ErrorState error={q.error} retry={() => void q.refetch()} compact />
+      ) : !q.data ? (
+        <RowSkeleton />
+      ) : items.length ? (
+        <div className="row-track" aria-live="polite">
+          {items.map((t) => (
+            <TitleCard key={t.key} title={t} context="binge" />
+          ))}
+        </div>
+      ) : (
+        <p className="muted section-note">No completed {genre.toLowerCase()} series found right now.</p>
+      )}
+    </section>
   );
 }
 
@@ -360,7 +420,8 @@ export default function Home() {
   const claims = useMemo(() => createClaims(), [seed]); // eslint-disable-line react-hooks/exhaustive-deps
   useSyncExternalStore(claims.subscribe, claims.version, claims.version);
   const homeDown = claims.failed.size > 0;
-  const sections = useMemo(() => orderSections(CATALOGUE_SECTIONS, ctx.state, ctx.prefs), [ctx.state, ctx.prefs]);
+  // "Finished series" is covered by the blueprint's Binge row above the catalogue rails
+  const sections = useMemo(() => orderSections(CATALOGUE_SECTIONS.filter((d) => d.id !== "completed"), ctx.state, ctx.prefs), [ctx.state, ctx.prefs]);
   const more = useRef<HTMLDivElement>(null);
   const recentSurprises = useRef<string[]>([]);
   const [params, setParams] = useSearchParams();
@@ -391,12 +452,26 @@ export default function Home() {
     nav(titlePath(pick.title), { state: { reason: pick.reason?.text ?? "Surprise pick" } });
   };
   surpriseRef.current = doSurprise;
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["browse"] });
+    setSeed((n) => n + 1);
+    window.scrollTo({ top: 0 });
+    toast("Feed refreshed");
+  };
   return (
     <div className="page home">
       <h1 className="sr-only">Dawghwa home</h1>
       {/* The shell has no top bar (D6): on phones and tablets Home carries the brand, and it scrolls away. */}
       <div className="home-bar">
         <Brand />
+        <button className="surprise" onClick={doSurprise} aria-label="Surprise me: open a random pick">
+          <span className="surprise-bubble" aria-hidden="true">
+            Surprise me
+          </span>
+          <span className="surprise-ico" aria-hidden="true">
+            <Shuffle size={24} strokeWidth={1.8} />
+          </span>
+        </button>
         {profile && (
           <Link to="/profile" className="home-bar-avatar" aria-label={`Profile: ${profile.name}`}>
             <ProfileAvatar profile={profile} size={36} />
@@ -404,35 +479,11 @@ export default function Home() {
         )}
       </div>
       <Featured ctx={ctx} claims={claims} />
-      <nav className="mood-strip" aria-label="Quick picks">
-        <button className="mood mood-lime" onClick={doSurprise}>
-          <Dices size={17} /> Surprise me
-        </button>
-        <Link className="mood" to="/search?q=completed%20romance%20with%20fewer%20than%20100%20chapters">
-          <Sparkles size={16} /> Short completed romance
-        </Link>
-        <Link className="mood" to="/search?q=completed%20fantasy%20manhwa">
-          <CheckCircle2 size={16} /> Completed fantasy
-        </Link>
-        <Link className="mood" to="/discover?order=latest">
-          <Timer size={16} /> Fresh chapters
-        </Link>
-        <button
-          className="mood"
-          onClick={async () => {
-            await qc.invalidateQueries({ queryKey: ["browse"] });
-            setSeed((n) => n + 1);
-            toast("Feed refreshed");
-          }}
-        >
-          <RefreshCw size={16} /> Refresh feed
-        </button>
-      </nav>
       <QuestStrip />
       <div className="feed">
         <ContinueReading />
-        <CategoryShelf ctx={ctx} preferred={ctx.prefs?.genres} quiet={homeDown} />
-        <PickedForYou ctx={pickCtx} pool={pool.items} seed={seed} />
+        <TopPicks ctx={pickCtx} pool={pool.items} seed={seed} loading={pool.loading} />
+        {!homeDown && <BingeRow ctx={ctx} preferred={ctx.prefs?.genres} />}
         <BecauseYouRead ctx={pickCtx} />
         {sections.slice(0, shownCount).map((d, i) => (
           <CatalogueSection key={`${d.id}-${seed}`} def={d} ctx={ctx} claims={claims} order={i} />
@@ -449,9 +500,17 @@ export default function Home() {
       )}
       {shownCount >= sections.length && !homeDown && (
         <div className="feed-end">
-          <MascotSays variant="head" size={72}>
+          <MascotSays variant="full" size={84}>
             That's the whole issue. Lost in another world? <Link to="/discover">Discover</Link> has every shelf.
           </MascotSays>
+          <div className="feed-end-actions">
+            <button className="btn" onClick={doSurprise}>
+              <Dices size={17} /> Surprise me
+            </button>
+            <button className="btn" onClick={refresh}>
+              <RefreshCw size={16} /> Refresh feed
+            </button>
+          </div>
         </div>
       )}
     </div>

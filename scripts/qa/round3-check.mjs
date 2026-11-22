@@ -5,7 +5,7 @@ const b = await chromium.launch();
 const ctx = await b.newContext({ serviceWorkers: "block", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const p = await ctx.newPage();
 await p.goto(base + "/welcome");
-await p.getByRole("button", { name: "Skip" }).click();
+await p.getByRole("button", { name: "Cancel" }).click();
 await p.waitForTimeout(800);
 await p.goto(base + "/search");
 const box = p.getByRole("searchbox").first();

@@ -11,7 +11,7 @@ async function mobile(w, h = 844) {
   await relay(ctx);
   const p = await ctx.newPage();
   await p.goto(base + "/welcome");
-  await p.getByRole("button", { name: "Skip" }).click();
+  await p.getByRole("button", { name: "Cancel" }).click();
   await p.waitForTimeout(400);
   return { ctx, p };
 }
@@ -55,7 +55,7 @@ for (const w of [360, 390, 412]) {
   await relay(ctx);
   const p = await ctx.newPage();
   await p.goto(base + "/welcome");
-  await p.getByRole("button", { name: "Skip" }).click();
+  await p.getByRole("button", { name: "Cancel" }).click();
   await p.waitForTimeout(1500);
   out.header = await p.evaluate(() => { const h = document.querySelector(".topbar").getBoundingClientRect(); const s = document.querySelector(".search-trigger").getBoundingClientRect(); return { hTop: h.top, hH: h.height, sTop: s.top - h.top, sBottom: h.bottom - s.bottom }; });
   await p.screenshot({ path: "/tmp/r2-desk-home.png" });

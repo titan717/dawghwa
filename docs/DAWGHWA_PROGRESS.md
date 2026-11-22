@@ -75,3 +75,16 @@ Round 3 scored 9.0 overall (8.995 unrounded) and was ACCEPTED, with Blueprint 9.
 - N3 follow-up: titles found to have 0 readable chapters are remembered locally (catalogue fact, 7-day TTL, max 300) and skipped as the home hero.
 - P17: the footer reads "through Dawghwa."
 - Verified with `scripts/qa/round3-check.mjs`. The negated query got no suggestion and the positive one got Theme Harem. 6 filter requests over 2 page loads in 16s. 0 "all sources" on a 503. tsc, eslint, 50 unit tests, build, and Playwright e2e (17 passed, 1 reader test skipped because the upstream circuit was open) all pass.
+
+## Milestone: blueprint v2 and new mascot (`feature/blueprint-v2`)
+
+The user supplied a new blueprint PDF (15 pages: reader end, My Series, Search, Home, a 4-step onboarding and a new border-collie mascot) and asked for it to become the source of truth, running on the existing system.
+- Mascot: cut out from the PDF's mascot page. `scripts/brand-assets.py` regenerates every app icon, maskable icon, favicon, OG image, Android launcher mipmap and splash from it. Stage colour #040108 with a violet glow.
+- Tokens: Inter only (Archivo removed), neutral greys (#171717 / #1e1e1e / #2a2a2a), black bottom nav, green #00f07a accent, purple-magenta brand gradient for onboarding and primary CTAs. Light theme mirrors it (#fff / #f2f2f2, green #00733a).
+- Home: Top Picks grid with green reasons, "Binge the Entire Series" with genre chips, plain cover rows with "#N" ranks and "New Chapter" badges, "Surprise me" bubble in the header.
+- My Series: underline tabs, "series total / unread series" toggle, sort select, list rows with Continue/View buttons, grid toggle, find and history.
+- Search: flat field, "What Everyone's Reading", "Browse Categories" tiles with stacked covers. Search and My Series drop the logo bar on phones, as on the blueprint.
+- Onboarding: genre image tiles, formats, avoid list, ready screen with the mascot; gradient Continue, dots, Cancel.
+- Reader end: credits (Creator), Next Chapter card with cover, TOP button and "Pull to read next chapter" (90px overscroll or tap).
+- Not built because the API has no support: comments, coins, Watch tab, Canvas, downloads, unlock timers, notifications.
+- Validation: tsc, eslint, 52 unit tests, build, Playwright e2e 19 passed / 1 desktop skip. `scripts/qa/v2-flow.mjs` walked dark 360/390/820/1440 and light 390/1920 with 0 console errors.

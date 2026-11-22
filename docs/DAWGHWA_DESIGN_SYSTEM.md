@@ -2,6 +2,16 @@
 
 The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the structure. The identity is the selected directions B and C. B is the editorial grid: Archivo display type, numbered section heads, hard ink frames and stickers. C is the mascot-led warmth: the beagle reader, lime as the action colour, lavender and vermilion as secondary accents. The source of truth is `src/styles/tokens.css`. This page explains the tokens and the rules for using them.
 
+## Blueprint v2 (current)
+
+The v2 blueprint PDF supersedes the earlier editorial direction. Values live in `src/styles/tokens.css`.
+- Type: Inter variable for everything; headings 700, section heads 21px, nav labels 10px uppercase.
+- Dark: bg #171717, surface #1e1e1e / #2a2a2a / #434343, nav #000, ink #fff / #cfcfcf / #9e9e9e, accent #00f07a.
+- Light: bg #fff, surface #f2f2f2, accent text #00733a, nav #fff.
+- Brand: gradient #c631ff → #ee31ff (onboarding, primary CTAs); stage #040108 behind the mascot; "hot" #e040fb.
+- Covers 10:13, 4px radius; titles one line; green reason line; "New Chapter" badge.
+- Mascot: border collie with blue bandana and book (`src/assets/mascot/*`, `brand/mascot-source.png`), violet glow, white speech bubble.
+
 ## Principles
 
 1. Dark first. Dark is the default theme. Light is a full alternative (Profile > Appearance), and System follows the OS.

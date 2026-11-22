@@ -41,3 +41,18 @@ The critic verified these as working (kept): the local-first library and profile
 ## Outcome
 
 The fixes are tracked in `DAWGHWA_PROGRESS.md`, and the critic's scores in `DAWGHWA_QA_SCORECARD.md`.
+
+
+## Blueprint v2 analysis
+
+| Blueprint page | Screen | Status |
+|---|---|---|
+| 1–2 | Comments, pull to next, TOP | Pull-to-next and TOP built; comments need an API that does not exist |
+| 3–4 | Reader end: credits, Creator, Next Episode | Built as "Next Chapter" with real authors and artists |
+| 5–6 | My Series | Built: tabs, totals/unread toggle, sort, list/grid, Continue/View |
+| 7 | Search | Built: field, What Everyone's Reading, Browse Categories |
+| 8–10 | Home | Built: Top Picks, Binge with chips, ranked rows, badges, black nav |
+| 11–14 | Onboarding | Built: genres, formats, avoid, ready screen |
+| 15 | Mascot | Replaced everywhere (app, icons, Android, OG) |
+
+Not implementable without backend features: comments, coins/free coins, Watch tab, Canvas, downloads, unlock timers, notification bell.

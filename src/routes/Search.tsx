@@ -3,7 +3,7 @@ import { useOnline } from "@/lib/platform/useOnline";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Compass, Globe, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { ChevronRight, Clock, Compass, Globe, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
 import { Sheet } from "@/components/Layer";
 import type { BrowseOrder, BrowseQuery, MangaKind } from "@/lib/api/types";
 import { TitleCard } from "@/components/TitleCard";
@@ -181,14 +181,22 @@ const CATEGORIES: { label: string; to: string; q: BrowseQuery }[] = [
 
 /** Category tile: the label plus the cover of that category's current top series (a real browse result). */
 function CategoryTile({ label, to, q }: { label: string; to: string; q: BrowseQuery }) {
-  const r = useBrowse({ ...q, limit: 2 });
-  const t = r.data?.items[0];
+  const r = useBrowse({ ...q, limit: 3 });
+  const covers = (r.data?.items ?? []).filter((t) => t.cover && !isMature(t)).slice(0, 3);
+  // blueprint: the top cover sits in front of two others, stacked to the bottom right
   return (
     <li>
       <Link className="cat-tile" to={to}>
         <span className="cat-tile-label">{label}</span>
-        <span className="cat-tile-art" aria-hidden="true">
-          {t?.cover ? <img src={coverSrc(t.cover)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <span className="skeleton" />}
+        <span className="cat-stack" aria-hidden="true">
+          {covers.length ? (
+            covers
+              .slice()
+              .reverse()
+              .map((t, i, a) => <img key={t.key} src={coverSrc(t.cover!)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" data-depth={a.length - 1 - i} />)
+          ) : (
+            <span className="skeleton" data-depth="0" />
+          )}
         </span>
       </Link>
     </li>
@@ -374,14 +382,14 @@ export default function Search() {
           }}
         >
           <SearchIcon size={20} aria-hidden="true" />
-          <input ref={input} autoFocus type="search" enterKeyHint="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Title, or describe it: dark revenge manhwa..." aria-label="Search titles" autoComplete="off" spellCheck={false} />
+          <input ref={input} autoFocus type="search" enterKeyHint="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Series, genres, themes, and more" aria-label="Search titles" autoComplete="off" spellCheck={false} />
           {text && (
             <button type="button" className="icon-btn" aria-label="Clear search" onClick={() => (setText(""), input.current?.focus())}>
               <X size={18} />
             </button>
           )}
         </form>
-        <div className="filter-bar" aria-label="Quick filters">
+        {hasQuery && <div className="filter-bar" aria-label="Quick filters">
           <button className="chip chip-filter" onClick={() => setSheet(true)} aria-label={`All filters${filterCount ? `, ${filterCount} active` : ""}`}>
             <SlidersHorizontal size={15} /> Filters{filterCount ? ` · ${filterCount}` : ""}
           </button>
@@ -403,7 +411,7 @@ export default function Search() {
               Clear filters
             </button>
           )}
-        </div>
+        </div>}
         {tagSuggest.length > 0 && (
           <div className="suggest-row" aria-label="Genre suggestions">
             {tagSuggest.map((t) => (
@@ -463,11 +471,11 @@ export default function Search() {
             <section className="section" aria-labelledby="trend-h">
               <div className="section-head">
                 <div className="section-titles">
-                  <h2 id="trend-h">What everyone's reading</h2>
-                  <p>Most-followed series first published this year</p>
+                  <h2 id="trend-h">What Everyone's Reading</h2>
+                  <p className="sr-only">Most-followed series first published this year</p>
                 </div>
-                <Link className="see-all" to={`/discover?year=${new Date().getFullYear()}`}>
-                  See all
+                <Link className="see-all" to={`/discover?year=${new Date().getFullYear()}`} aria-label="See all: what everyone's reading">
+                  <ChevronRight size={24} strokeWidth={2.2} />
                 </Link>
               </div>
               {trending.data ? (
@@ -484,7 +492,7 @@ export default function Search() {
           <section className="section" aria-labelledby="cat-h">
             <div className="section-head">
               <div className="section-titles">
-                <h2 id="cat-h">Browse categories</h2>
+                <h2 id="cat-h">Browse Categories</h2>
               </div>
             </div>
             <ul className="cat-tiles">
