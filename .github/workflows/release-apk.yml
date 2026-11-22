@@ -36,6 +36,16 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+      - name: Validate inputs
+        env:
+          API_URL: ${{ vars.DAWGHWA_API_URL }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::Tag must look like v1.2.3 (got '$TAG')"; exit 1
+          fi
+          if [ -z "$API_URL" ]; then
+            echo "::error::Repository variable DAWGHWA_API_URL is empty; the APK would have no API."; exit 1
+          fi
       - run: npm ci
       - name: Web build + Capacitor sync
         env:
@@ -78,7 +88,7 @@ jobs:
         run: |
           NOTE="Android APK for Dawghwa ${TAG}. Install by allowing installs from your browser, then open dawghwa.apk."
           if [ "${{ steps.ks.outputs.signed }}" != "1" ]; then
-            NOTE="$NOTE This build is debug-signed: to update from an older debug build you may need to uninstall it first."
+            NOTE="$NOTE This build is debug-signed with a per-build key, so Android will refuse to update over an older Dawghwa APK. Before installing a new version, export your profiles (Profile > Export), uninstall the old app, install this one, then import them."
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/dawghwa.apk" "$RUNNER_TEMP/dawghwa.apk.sha256" --clobber
