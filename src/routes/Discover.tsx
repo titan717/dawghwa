@@ -4,7 +4,8 @@ import { ArrowLeft, Grid2x2, Grid3x3, SlidersHorizontal, X } from "lucide-react"
 import { updateSettings, useSettings } from "@/lib/settings";
 import { DiscoverHub } from "./DiscoverHub";
 import { TitleGrid } from "@/components/Grid";
-import { EmptyState, ErrorState, GridSkeleton } from "@/components/States";
+import { EmptyState, GridSkeleton } from "@/components/States";
+import { PartialNote, ResultsError } from "@/components/DiscoveryStates";
 import { Sheet } from "@/components/Layer";
 import { Segmented } from "@/components/Segmented";
 import { useBrowseInfinite, useVocabulary } from "@/lib/query";
@@ -180,7 +181,7 @@ function Catalogue() {
           <Segmented label="Included tags must" value={tagMode} options={[["all", "Match all"], ["any", "Match any"]]} onChange={(m) => setOne("match", m === "any" ? "any" : undefined)} />
         </fieldset>
       )}
-      {vocab.isError && <ErrorState error={vocab.error} retry={() => void vocab.refetch()} compact />}
+      {vocab.isError && <ResultsError error={vocab.error} retry={() => void vocab.refetch()} compact />}
       {tagGroups.length > 0 && <p className="muted filter-hint">Tags: tap once to include, again to exclude, a third time to clear.</p>}
       {tagGroups.map(([group, names]) => (
         <fieldset key={group}>
@@ -210,7 +211,7 @@ function Catalogue() {
         <div>
           <h1>{heading}</h1>
           <p className="muted">
-            {total !== undefined ? `${approx ? "About " : ""}${total.toLocaleString()} titles match` : "Browse the MangaDex catalogue"}
+            {total !== undefined ? `${approx ? "About " : ""}${total.toLocaleString()} titles match` : "Browse the catalogue"}
           </p>
         </div>
         <div className="cluster">
@@ -276,17 +277,19 @@ function Catalogue() {
           </button>
         </div>
       )}
-      <p className="muted discover-coverage">
-        Results come from the MangaDex catalogue{total !== undefined && total > maxOffset ? `; only the first ${maxOffset.toLocaleString()} can be browsed, so narrow the filters to reach the rest` : ""}.
-        {approx ? " Some filters are applied on this device to each loaded page, so the count is approximate." : ""}
-      </p>
+      {((total !== undefined && total > maxOffset) || approx) && (
+        <p className="muted discover-coverage">
+          {total !== undefined && total > maxOffset ? `Only the first ${maxOffset.toLocaleString()} titles can be browsed, so narrow the filters to reach the rest.` : ""}
+          {approx ? " Some filters are applied on this device to each loaded page, so the count is approximate." : ""}
+        </p>
+      )}
       <div className="discover-layout">
         <aside className="discover-filters" aria-label="Filters">
           {filters}
         </aside>
         <div>
           {q.isError && !items.length ? (
-            <ErrorState error={q.error} retry={() => void q.refetch()} />
+            <ResultsError error={q.error} retry={() => void q.refetch()} />
           ) : q.isLoading ? (
             <GridSkeleton density={density} />
           ) : !items.length ? (
@@ -296,7 +299,7 @@ function Catalogue() {
           ) : (
             <TitleGrid items={items} context="discover" density={density} hasMore={q.hasNextPage} loadingMore={q.isFetchingNextPage} onMore={() => void q.fetchNextPage()} />
           )}
-          {q.isError && items.length > 0 && <ErrorState error={q.error} retry={() => void q.fetchNextPage()} compact />}
+          {q.isError && items.length > 0 && <PartialNote retry={() => void q.fetchNextPage()} />}
         </div>
       </div>
       <Sheet open={open} onClose={() => setOpen(false)} title="Filters">

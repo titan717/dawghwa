@@ -1,5 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { toast } from "@/components/Toast";
 import { db, type CommentRecord } from "./store/db";
+import { isIncognito } from "./store/incognito";
 import { getUser, signal, subscribeUser } from "./store/user";
 import type { Title } from "./titles";
 
@@ -86,6 +88,7 @@ export function cleanBody(body: string): string {
 export async function addComment(input: { title: Title; chapterId: string; chapterNumber?: number; body: string; parentId?: string }): Promise<CommentRecord | undefined> {
   const pid = getUser().profile?.id;
   const body = cleanBody(input.body);
+  if (isIncognito()) return void toast("Comments aren't kept in Incognito");
   if (!pid || !body) return;
   const now = Date.now();
   const rec: CommentRecord = { profileId: pid, id: newId(), titleKey: input.title.key, chapterId: input.chapterId, chapterNumber: input.chapterNumber, body, parentId: input.parentId, at: now, updatedAt: now };
@@ -97,6 +100,7 @@ export async function addComment(input: { title: Title; chapterId: string; chapt
 }
 
 async function patch(c: CommentRecord, change: Partial<CommentRecord>) {
+  if (isIncognito()) return c; // Incognito: edits, pins and votes are not kept
   const rec = { ...c, ...change, updatedAt: Date.now() };
   await (await db()).put("comments", rec);
   put(rec);

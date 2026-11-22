@@ -1,19 +1,21 @@
 import { Link } from "react-router-dom";
-import { Award, BookOpen, CalendarDays, Compass, Flag, FolderHeart, Heart, Layers, MessageSquare, Sparkles } from "lucide-react";
+import { Award, BookOpen, CalendarDays, Compass, Flag, FolderHeart, Heart, Layers, MessageSquare, Snowflake, Sparkles } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { Kicker } from "@/components/Editorial";
 import { EMBLEM_ICON, LevelMascot, TIER_ICON } from "@/components/LevelMascot";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { QuestList } from "@/components/Quests";
-import { Segmented } from "@/components/Segmented";
 import { EMBLEMS, FRAMES, needsLabel, unlocked, type Cosmetic } from "@/lib/rewards/cosmetics";
-import { rhythm as rhythmFor } from "@/lib/rewards/rhythm";
+import { StreakChip } from "@/components/StreakChip";
+import { useIncognito } from "@/lib/store/incognito";
+import { dayKey, meaningfulDays, streak as streakFor } from "@/lib/rewards/streak";
+import { weekStart } from "@/lib/rewards/quests";
 import { MascotSays } from "@/components/Mascot";
 import { ProfileSkeleton } from "@/components/States";
-import { TIERS, XP, useProgression, type XpEntry } from "@/lib/rewards";
+import { DAILY_XP_CAP, TIERS, XP, useProgression, type XpEntry } from "@/lib/rewards";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { updateProfile, useUser } from "@/lib/store/user";
-import type { ProfileRecord } from "@/lib/store/db";
+import type { EventRecord, ProfileRecord } from "@/lib/store/db";
 import { useHead } from "@/lib/seo";
 import { titlePath } from "@/lib/titles";
 
@@ -60,37 +62,43 @@ const when = (t: number) => new Date(t).toLocaleDateString(undefined, { month: "
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** Opt-in rhythm. Off by default; when on it counts good weeks, never a streak. */
-function RhythmCard({ target, events }: { target: number; events: Parameters<typeof rhythmFor>[0] }) {
-  const r = rhythmFor(events, target);
+/** Streak with a weekly freeze (D68). Derived from finished chapters and reading time; nothing to buy. */
+function StreakCard({ events }: { events: EventRecord[] }) {
+  const incognito = useIncognito();
+  const s = streakFor(events);
+  const read = meaningfulDays(events);
+  const frozen = new Set(s.frozen.map(dayKey));
+  const today = dayKey(Date.now());
+  const start = weekStart(Date.now());
+  const week = DOW.map((name, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const k = dayKey(d.getTime());
+    return { name, k, read: read.has(k), frozen: frozen.has(k), future: k > today };
+  });
+  if (incognito) return null;
   return (
-    <section className="profile-block rhythm" aria-labelledby="rhythm-h">
+    <section className="profile-block streak-block" aria-labelledby="streak-h">
       <div className="profile-block-head">
-        <h2 id="rhythm-h">Reading rhythm</h2>
-        <p className="muted">Optional. Pick a gentle weekly goal; rest days are part of it and nothing resets.</p>
+        <h2 id="streak-h">Streak</h2>
+        <p className="muted">Days in a row with a finished chapter. Each week brings one freeze that covers a single missed day by itself.</p>
       </div>
-      <Segmented
-        label="Reading days per week"
-        value={String(target)}
-        options={[["0", "Off"], ["2", "2 days"], ["3", "3 days"], ["5", "5 days"]]}
-        onChange={(v) => void updateProfile({ rhythm: Number(v) })}
-      />
-      {target > 0 && (
-        <>
-          <ol className="rhythm-week" aria-label="This week">
-            {r.week.map((d, i) => (
-              <li key={d.date} data-read={d.read || undefined} data-future={d.future || undefined}>
-                <span className="rhythm-dot" aria-hidden="true" />
-                <span>{DOW[i]}</span>
-                <span className="sr-only">{d.read ? "read" : d.future ? "still ahead" : "rest day"}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="muted">
-            {r.daysThisWeek >= target ? `Rhythm reached this week (${r.daysThisWeek} days).` : `${r.daysThisWeek} of ${target} days this week. Any days count.`} {r.weeksMet} {r.weeksMet === 1 ? "week" : "weeks"} with your rhythm so far.
-          </p>
-        </>
-      )}
+      <div className="streak-row">
+        {s.days > 0 ? <StreakChip streak={s} /> : <span className="muted">Read a chapter to start a streak.</span>}
+        <span className="muted">{s.freezeAvailable ? "This week's freeze is ready." : "This week's freeze is used. A new one comes on Monday."}</span>
+      </div>
+      <ol className="rhythm-week" aria-label="This week">
+        {week.map((d) => (
+          <li key={d.k} data-read={d.read || undefined} data-future={d.future || undefined} data-frozen={d.frozen || undefined}>
+            <span className="rhythm-dot" aria-hidden="true">
+              {d.frozen && <Snowflake size={10} aria-hidden />}
+            </span>
+            <span>{d.name}</span>
+            <span className="sr-only">{d.read ? "read" : d.frozen ? "covered by the freeze" : d.future ? "still ahead" : "no reading"}</span>
+          </li>
+        ))}
+      </ol>
+      {s.longest > 0 && <p className="muted">Longest streak: {s.longest} {s.longest === 1 ? "day" : "days"}.</p>}
     </section>
   );
 }
@@ -150,7 +158,7 @@ export default function Achievements() {
   return (
     <div className="page page-narrow ach-page">
       <header className="ach-head">
-        <Kicker>Just for fun, no streaks</Kicker>
+        <Kicker>Just for fun</Kicker>
         <h1 className="page-title">Achievements</h1>
       </header>
 
@@ -194,7 +202,7 @@ export default function Achievements() {
         </p>
       </section>
 
-      {profile && <RhythmCard target={profile.rhythm ?? 0} events={events} />}
+      <StreakCard events={events} />
 
       <section aria-labelledby="sets-h">
         <div className="profile-block-head">
@@ -258,8 +266,11 @@ export default function Achievements() {
           <li>
             <b>+{XP.quest}</b> for each weekly quest
           </li>
+          <li>
+            Up to <b>{DAILY_XP_CAP}</b> XP a day in total
+          </li>
         </ul>
-        <p className="muted">Re-reading, opening chapters and marking chapters read by hand do not add XP. Nothing expires and nothing can be lost.</p>
+        <p className="muted">Re-reading, opening chapters and marking chapters read by hand do not add XP. XP never expires and is never taken away.</p>
       </section>
 
       <p className="muted ach-foot">

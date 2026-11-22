@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { db, getCachedTitles, kvGet, kvSet } from "../store/db";
+import { isIncognito } from "../store/incognito";
 import { getUser, profileEvents, subscribeUser } from "../store/user";
 import type { Title } from "../titles";
 import { deserialize, serialize, train, type LearnerState, type SerializedState } from "./learner";
+import { tasteEvidence, type TasteEvidence } from "./confidence";
 
 /**
  * Per-profile intelligence runtime. The model lives in IndexedDB (`intel`
@@ -108,7 +110,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let running: Promise<void> | null = null;
 
 export async function retrain(profileId = getUser().profile?.id): Promise<void> {
-  if (!profileId) return;
+  if (!profileId || isIncognito()) return;
   const s = await trainProfile(profileId);
   if (getUser().profile?.id !== profileId) return; // profile switched meanwhile
   current = s;
@@ -170,4 +172,18 @@ export async function resetIntel() {
   await kvSet(resetKey(pid), Date.now());
   await kvSet(forgottenKey(pid), []);
   await retrain(pid);
+}
+
+/**
+ * Read-only inputs for the taste-signal label (src/lib/intel/confidence.ts):
+ * the profile's events, cached metadata of those titles, forgotten titles and
+ * reset time. Nothing is written and nothing leaves the device.
+ */
+export async function loadTasteEvidence(profileId = getUser().profile?.id): Promise<{ evidence: TasteEvidence; titles: Map<string, Title> } | null> {
+  if (!profileId) return null;
+  const events = await profileEvents(profileId);
+  const titles = await getCachedTitles([...new Set(events.map((e) => e.titleKey))]);
+  const forgotten = new Set((await kvGet<string[]>(forgottenKey(profileId))) ?? []);
+  const resetAt = (await kvGet<number>(resetKey(profileId))) ?? 0;
+  return { evidence: tasteEvidence(events, titles, { forgotten, resetAt }), titles };
 }

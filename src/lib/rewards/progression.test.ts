@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventRecord } from "../store/db";
 import type { Title } from "../titles";
-import { XP, achievementSets, gains, ledger, levelFor, levelStart, makeSet, passport, stepCost, tierFor } from "./progression";
+import { DAILY_CAP_FROM, DAILY_XP_CAP, XP, achievementSets, capDaily, gains, ledger, levelFor, levelStart, makeSet, passport, stepCost, tierFor } from "./progression";
 
 let seq = 0;
 const ev = (kind: string, titleKey: string, at: number, extra: Partial<EventRecord> = {}): EventRecord => ({ profileId: "p", seq: ++seq, kind, titleKey, at, ...extra });
@@ -40,6 +40,40 @@ describe("ledger (farm-proofing)", () => {
   it("is independent of event order in storage", () => {
     const evs = [ev("chapter_read", "a", T0 + 5, { value: 2 }), ev("chapter_read", "a", T0, { value: 1 })];
     expect(ledger(evs, titles).total).toBe(ledger([...evs].reverse(), titles).total);
+  });
+});
+
+describe("daily cap and Incognito", () => {
+  const D = DAILY_CAP_FROM + 10 * 3_600_000; // 10:00 on the first capped day
+  const many = (start: number, n: number, key = "a") => Array.from({ length: n }, (_, i) => ev("chapter_read", key, start + i * 60_000, { value: i + 1 }));
+  it("caps XP per local day, but chapters still count for badges", () => {
+    const l = ledger(many(D, 60), titles);
+    expect(l.chapters).toBe(60);
+    expect(l.total).toBe(DAILY_XP_CAP);
+  });
+  it("starts fresh the next local day", () => {
+    const l = ledger([...many(D, 40), ...many(D + DAY, 5, "b").map((e) => ({ ...e, value: (e.value ?? 0) + 100 }))], titles);
+    expect(l.total).toBe(DAILY_XP_CAP + 5 * XP.chapter + XP.series);
+  });
+  it("includes quest XP in the cap", () => {
+    const l = ledger(many(D, 40), titles, [{ at: D + 3_600_000, xp: XP.quest, reason: "quest", ref: "q" }]);
+    expect(l.total).toBe(DAILY_XP_CAP);
+  });
+  it("never takes away XP from days before the cap shipped", () => {
+    const early = DAILY_CAP_FROM - 2 * DAY;
+    expect(ledger(many(early, 60), titles).total).toBe(60 * XP.chapter + XP.series + 2 * XP.genre);
+  });
+  it("trims the entry that crosses the cap and drops the rest", () => {
+    const e = (xp: number, at: number) => ({ at, xp, reason: "chapter" as const });
+    expect(capDaily([e(25, 1), e(25, 2), e(25, 3)], 60, 0).map((x) => x.xp)).toEqual([25, 25, 10]);
+  });
+  it("one award per chapter per day: re-reading the same chapter the same day earns nothing more", () => {
+    const l = ledger([ev("chapter_read", "a", D, { value: 1 }), ev("chapter_read", "a", D + 1000, { value: 1 })], titles);
+    expect(l.entries.filter((x) => x.reason === "chapter")).toHaveLength(1);
+  });
+  it("Incognito events earn nothing", () => {
+    const l = ledger([ev("chapter_read", "a", T0, { value: 1, context: "incognito" }), ev("title_finished", "a", T0 + 1, { context: "incognito" })], titles);
+    expect(l).toMatchObject({ total: 0, chapters: 0, series: 0, activeDays: 0 });
   });
 });
 
@@ -96,7 +130,8 @@ describe("passport and gains", () => {
 });
 
 describe("copy", () => {
-  it("never mentions streaks as something to keep or lose", () => {
+  // Streaks exist (D68), but never as guilt: nothing to keep, lose or miss.
+  it("never uses guilt copy about streaks", () => {
     const sets = achievementSets({ ledger: ledger([], titles), library: [], collections: 0 });
     for (const s of sets) expect(`${s.name} ${s.rule} ${s.hint}`).not.toMatch(/keep your streak|lose|lost|miss/i);
   });

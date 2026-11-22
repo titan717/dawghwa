@@ -1,6 +1,8 @@
 import { chapterAliases } from "@/lib/chapters";
+import { toast } from "@/components/Toast";
 import { useSyncExternalStore } from "react";
 import type { Title } from "../titles";
+import { isIncognito } from "./incognito";
 import { cacheTitles, db, getCachedTitles, kvGet, kvSet, type EventRecord, type Hidden, type LibraryRecord, type LibraryStatus, type ProfileRecord, type ProgressRecord } from "./db";
 
 /**
@@ -187,6 +189,8 @@ export async function rememberTitle(t: Title) {
 export async function signal(kind: SignalKind, t: Title | undefined, titleKey = t?.key, extra: { value?: number; context?: string } = {}) {
   const profile = state.profile;
   if (!profile || !titleKey) return;
+  // Incognito: no event, so no history, rewards or recommender learning (listeners never fire).
+  if (isIncognito()) return;
   if (t) await rememberTitle(t);
   const e: EventRecord = { profileId: profile.id, seq: ++seq, kind, titleKey, at: Date.now(), ...extra };
   await (await db()).put("events", e);
@@ -313,7 +317,8 @@ const RETURN_GAP_MS = 6 * 3600 * 1000;
  */
 export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | undefined> {
   const profile = state.profile;
-  if (!profile) return;
+  // Incognito: position, history, Continue reading and the auto "Reading"/"Completed" status stay as they were.
+  if (!profile || isIncognito()) return;
   const now = Date.now();
   const prev = state.progress.get(u.title.key);
   const read = { ...(prev?.read ?? {}) };
@@ -355,6 +360,7 @@ export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | 
 
 export async function markChaptersRead(t: Title, chapters: { id: string; number: number; variants?: { providerChapterId: string; variantId?: string }[] }[], read: boolean) {
   const profile = state.profile;
+  if (isIncognito()) return void toast("Not saved in Incognito");
   if (!profile || !chapters.length) return;
   const prev = state.progress.get(t.key);
   const now = Date.now();

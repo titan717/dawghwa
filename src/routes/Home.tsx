@@ -3,6 +3,8 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dices, Play, RefreshCw, Shuffle } from "lucide-react";
 import { Row, SectionHead } from "@/components/Row";
+import { StreakChip } from "@/components/StreakChip";
+import { useIncognito } from "@/lib/store/incognito";
 import { ChapterNo } from "@/components/Editorial";
 import { Hero } from "@/components/Hero";
 import { TitleCard } from "@/components/TitleCard";
@@ -410,6 +412,7 @@ function SomethingDifferent({ ctx, pool }: { ctx: RankContext; pool: Title[] }) 
 
 export default function Home() {
   const profile = useUser((s) => s.profile);
+  const incognito = useIncognito();
   const ctx = useRankContext();
   const pickCtx = useRankContext({ excludeLibrary: true });
   const pool = usePools(pickCtx);
@@ -461,7 +464,7 @@ export default function Home() {
   return (
     <div className="page home">
       <h1 className="sr-only">Dawghwa home</h1>
-      {/* The shell has no top bar (D6): on phones and tablets Home carries the brand, and it scrolls away. */}
+      {/* Phones and tablets: Home carries the brand in a sticky bar (shell.css). Desktop uses the app header instead. */}
       <div className="home-bar">
         <Brand />
         <button className="surprise" onClick={doSurprise} aria-label="Surprise me: open a random pick">
@@ -472,6 +475,7 @@ export default function Home() {
             <Shuffle size={24} strokeWidth={1.8} />
           </span>
         </button>
+        <StreakChip to="/achievements" incognito={incognito} className="home-bar-streak" />
         {profile && (
           <Link to="/profile" className="home-bar-avatar" aria-label={`Profile: ${profile.name}`}>
             <ProfileAvatar profile={profile} size={36} />

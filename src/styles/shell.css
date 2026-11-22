@@ -1,0 +1,228 @@
+/* ============================================================ shell chrome
+   Phones and tablets (<1024px): black bottom nav (app.css) and Home's sticky brand row.
+   Desktop (>=1024px): one sticky top header with the primary navigation. No sidebar anywhere. */
+
+/* ---------------------------------------------------------------- Home bar (<1024px) */
+.home-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: calc(56px + var(--safe-top));
+  /* Bleed to the screen edges so the bar's background covers content scrolling beneath it,
+     and absorb the page and status-bar padding above it so it starts at the very top. */
+  margin: calc(-1 * (var(--space-4) + var(--safe-top))) calc(-1 * var(--gutter)) 0;
+  padding: var(--safe-top) var(--gutter) 0;
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.shell[data-scrolled] .home-bar {
+  border-bottom-color: var(--line);
+  box-shadow: 0 6px 12px -10px rgb(0 0 0 / 0.35);
+}
+.home-bar .brand {
+  min-width: 0;
+}
+.home-bar .surprise {
+  flex: none;
+  min-height: 44px;
+  padding: 0 2px;
+}
+.home-bar .surprise-bubble {
+  white-space: nowrap;
+}
+.home-bar-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+/* Streak chip sits beside the avatar; the Surprise me group takes the free space before it. */
+.home-bar .surprise {
+  margin-left: auto;
+}
+.home-bar-streak {
+  flex: none;
+}
+.app-header-streak {
+  flex: none;
+}
+/* Narrow phones: keep the bubble readable and the tap target whole by tightening around it. */
+@media (max-width: 379px) {
+  .home-bar {
+    gap: var(--space-1);
+  }
+  .home-bar .surprise {
+    gap: 8px;
+  }
+  .home-bar .surprise-bubble {
+    padding: 6px 8px;
+  }
+  .home-bar .surprise-ico {
+    width: 28px;
+  }
+  .home-bar-streak {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+  }
+}
+
+/* ---------------------------------------------------------------- App header (>=1024px) */
+.app-header {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --topbar-h: var(--app-header-h);
+  }
+  .home-bar {
+    display: none;
+  }
+  .main {
+    /* The header carries the status-bar inset itself. */
+    padding-top: 0;
+  }
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    height: calc(var(--app-header-h) + var(--safe-top));
+    padding: var(--safe-top) var(--gutter) 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    transition: box-shadow var(--dur);
+  }
+  .shell[data-scrolled] .app-header {
+    box-shadow: 0 8px 18px -14px rgb(0 0 0 / 0.45);
+  }
+  [data-theme="light"] .shell[data-scrolled] .app-header {
+    box-shadow: 0 8px 18px -14px rgb(17 17 20 / 0.28);
+  }
+  .app-header-brand {
+    flex: none;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+  }
+  .app-header-nav {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-1);
+    height: 100%;
+    min-width: 0;
+  }
+  .app-header-nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    color: var(--ink-2);
+    font-size: var(--text-sm);
+    font-weight: 560;
+    white-space: nowrap;
+    transition: color var(--dur-fast);
+  }
+  .app-header-nav a:hover {
+    color: var(--ink);
+  }
+  .app-header-nav a[aria-current="page"] {
+    color: var(--ink);
+    font-weight: 650;
+  }
+  /* Green marks state only, as a fill. Light theme uses the deeper green so the bar keeps 3:1. */
+  .app-header-nav a[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--accent);
+  }
+  [data-theme="light"] .app-header-nav a[aria-current="page"]::after {
+    background: var(--accent-text);
+  }
+  .app-header-nav a:focus-visible {
+    outline-offset: -4px;
+  }
+  .app-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+  .app-header-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    width: clamp(160px, 18vw, 240px);
+    padding: 0 8px 0 14px;
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    font-size: var(--text-sm);
+    text-align: left;
+    transition: border-color var(--dur-fast);
+  }
+  .app-header-search:hover {
+    border-color: var(--line-strong);
+  }
+  .app-header-search kbd {
+    margin-left: auto;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-2);
+  }
+  .app-header-icon,
+  .app-header-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--ink-2);
+    transition: background var(--dur-fast), color var(--dur-fast);
+  }
+  .app-header-icon:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .app-header-icon:active,
+  .app-header-search:active {
+    transform: scale(0.96);
+  }
+  [data-immersive] .app-header {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-header,
+  .home-bar {
+    transition: none;
+  }
+}
+[data-reduce-motion] .app-header,
+[data-reduce-motion] .home-bar {
+  transition: none;
+}
+[data-reduce-motion] .app-header-icon:active,
+[data-reduce-motion] .app-header-search:active {
+  transform: none;
+}

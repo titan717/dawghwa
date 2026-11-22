@@ -48,7 +48,7 @@ export class ApiError extends Error {
     return this.status >= 500 && this.status !== 501;
   }
 
-  /** The source cannot do this at all (not a temporary failure). */
+  /** The backend cannot do this at all (not a temporary failure). */
   get unsupported(): boolean {
     return this.code === "UNSUPPORTED_CAPABILITY" || this.status === 501;
   }
@@ -59,7 +59,7 @@ export class ApiError extends Error {
       case "offline":
         return "You're offline. Reconnect to load this.";
       case "timeout":
-        return "This is taking too long. The source may be slow right now.";
+        return "This is taking too long. Try again in a moment.";
       case "network":
         return "Couldn't connect. Check your connection and try again.";
       case "aborted":
@@ -71,17 +71,17 @@ export class ApiError extends Error {
       case "RATE_LIMITED":
         return "Too many requests. Give it a moment.";
       case "UPSTREAM_BLOCKED":
-        return "This source is blocking automated access right now.";
+        return "This isn't available right now. Try again later.";
       case "UPSTREAM_TIMEOUT":
-        return "The source didn't answer in time.";
+        return "This is taking too long. Try again in a moment.";
       case "SOURCE_UNAVAILABLE":
-        return "This source is unavailable.";
+        return "This isn't available right now. Try again later.";
       case "SOURCE_CIRCUIT_OPEN":
-        return "This source is failing repeatedly and is paused for a minute.";
+        return "This isn't available right now. Try again in a minute.";
       case "UNSUPPORTED_CAPABILITY":
-        return "This source doesn't support that.";
+        return "This isn't available here.";
       case "NOT_FOUND":
-        return "Not found on the source.";
+        return "We couldn't find this.";
       default:
         // Never surface raw status text ("Service Unavailable") to readers.
         if (this.status >= 500) return "The Dawghwa service isn't responding right now. Try again in a moment.";

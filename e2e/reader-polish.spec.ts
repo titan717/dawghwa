@@ -36,6 +36,11 @@ test("chapter-end card offers the next chapter, the series and a rating", async 
   await expect(page.locator(".rd-top")).not.toHaveAttribute("data-hidden");
   await expect(card.getByRole("button", { name: /Up next/ })).toBeVisible();
   await expect(card.getByRole("link", { name: "Back to series" })).toBeVisible();
+  // hidden sources: credits name only the group (when known) and the content language
+  const credits = card.locator(".rd-credits");
+  await expect(credits).toHaveText(/^Credits: /);
+  await expect(credits).not.toHaveText(/\bvia\b|mangadex/i);
+  await expect(page.locator(".rd-top")).not.toHaveText(/\bvia\b|mangadex/i);
   const like = card.getByRole("button", { name: "Like this series" });
   await expect(like).toHaveAttribute("aria-pressed", "false");
   await like.click();
@@ -79,4 +84,15 @@ test("the progress line is a scrubber: tap to jump, arrows step pages", async ({
   await expect.poll(async () => Number(await slider.getAttribute("aria-valuenow"))).toBeLessThan(5);
   await slider.press("ArrowRight");
   await expect(slider).toHaveAttribute("aria-valuetext", /^Page 2 of/, { timeout: 10_000 });
+});
+
+test("the version picker and reader text never name where a chapter comes from", async ({ page, request }) => {
+  await openChapter(page, request);
+  await expect(page.locator(".reader")).not.toContainText(/mangadex/i);
+  await page.getByRole("button", { name: /Reader settings/i }).click();
+  const picker = page.getByRole("combobox", { name: "Chapter version" });
+  if (await picker.count()) {
+    for (const label of await picker.locator("option").allTextContents()) expect(label).toMatch(/^Version \d+/);
+  }
+  await expect(page.getByRole("dialog")).not.toContainText(/mangadex/i);
 });

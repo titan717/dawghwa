@@ -27,6 +27,8 @@ import type { Chapter, ChapterPage, ChapterVariant } from "@/lib/api/types";
 import { api } from "@/lib/api/endpoints";
 import { chapterAliases, chapterBadge, chapterLabel, editionLabel, fallbackPlan, findChapter, isChapterRead, languageLabel, mapPosition, pickVariant, variantIdOf } from "@/lib/chapters";
 import { isBookmarked, removeBookmark, toggleBookmark, useBookmarks } from "@/lib/store/bookmarks";
+import { readPos, writePos } from "@/lib/reader/position";
+import { isIncognito } from "@/lib/store/incognito";
 
 /**
  * Scroll-only reader (D8). The top bar slides away on scroll-down and comes back on
@@ -103,6 +105,7 @@ function ReaderView() {
   const title = t.data;
   const chapters = useChapters(title);
   const prog = useUser((s) => (title ? s.progress.get(title.key) : undefined));
+  const profileId = useUser((s) => s.profile?.id);
   const rating = useUser((s) => (title ? s.library.get(title.key)?.rating : undefined));
   const [pageRefreshKey, setPageRefreshKey] = useState(0);
 
@@ -131,7 +134,6 @@ function ReaderView() {
   const activeSource = selectedVariant?.sourceId ?? preferredSource ?? source;
   const activeChapterId = selectedVariant?.providerChapterId ?? chapterId;
   const chapterKey = chapter?.id ?? chapterId;
-  const src = sources.data?.find((s) => s.id === activeSource);
   // unified rows always carry variants; a legacy single-source list falls back to the source capability
   const readable = selectedVariant ? true : sources.data ? Boolean(sources.data.find((s) => s.id === source)?.capabilities.chapterPages) : true;
   const pagesQ = usePages(activeSource, activeChapterId, settings.dataSaver, readable && (Boolean(selectedVariant) || chapters.isSuccess || chapters.isError), selectedVariant?.url, pageRefreshKey);
@@ -140,8 +142,9 @@ function ReaderView() {
   const prev = idx > 0 ? list[idx - 1] : undefined;
   const next = idx >= 0 ? list[idx + 1] : undefined;
 
-  // a synchronous position mirror covers reloads that land before the IndexedDB write commits
-  const mirror = chapterKey ? readPos(chapterKey) : undefined;
+  // IndexedDB progress (per profile) is the source of truth; this per-profile mirror covers
+  // reloads that land before the IndexedDB write commits and older chapters of the title
+  const mirror = readPos(profileId, chapterKey);
   const fresh = mirror && (!sameChapter(prog?.chapterId) || mirror.t > (prog?.updatedAt ?? 0)) ? mirror : undefined;
   const paramPage = Number(params.get("p") ?? (fresh ? fresh.page : sameChapter(prog?.chapterId) ? prog!.page : 0)) || 0;
   const carried = carry && carry.variantId === activeVariantId && count ? mapPosition(carry.page, carry.count, count) : undefined;
@@ -271,7 +274,8 @@ function ReaderView() {
       if (scroller.current && !pinning.current) anchor.current = measureAnchor(scroller.current) ?? anchor.current;
       const a = anchor.current;
       const p = Math.min(a ? a.page : latest.current.page, count - 1);
-      writePos(chapter.id, p, a?.offset);
+      // skip: Incognito turns this off at integration
+      writePos(profileId, chapter.id, { page: p, offset: a?.offset }, { skip: isIncognito() });
       void saveProgress({
         title,
         chapterId: chapter.id,
@@ -288,7 +292,7 @@ function ReaderView() {
         lastChapterNumber: list.at(-1)?.number,
       });
     },
-    [title, chapter, count, list, selectedVariant],
+    [title, chapter, count, list, selectedVariant, profileId],
   );
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -560,10 +564,10 @@ function ReaderView() {
       const to = plan.automatic[0];
       void api.report({ sourceId: selectedVariant.sourceId, kind, chapterKey: chapter.id, providerChapterId: selectedVariant.providerChapterId, errorCode, fallback: { attempted: Boolean(to), succeeded: false, toSourceId: to?.sourceId } });
       if (to) {
-        const diffs = [to.sourceId !== selectedVariant.sourceId ? null : "another upload", (to.group?.id ?? "") !== (selectedVariant.group?.id ?? "") && to.group ? `translated by ${to.group.name}` : null].filter(Boolean);
+        const byGroup = (to.group?.id ?? "") !== (selectedVariant.group?.id ?? "") && to.group ? `, translated by ${to.group.name}` : "";
         setNotice({
           kind: "fallback",
-          text: `${selectedVariant.source} couldn't load ${chapterLabel(chapter)}. Switched to the same chapter (${languageLabel(to.language ?? chapter.language)}) on ${to.source}${diffs.length ? `, ${diffs.join(", ")}` : ""}.`,
+          text: `This version couldn't load ${chapterLabel(chapter)}. Switched to another version of the same chapter (${languageLabel(to.language ?? chapter.language)})${byGroup}.`,
         });
         switchVariant(to, "fallback");
       } else if (plan.manual.length) {
@@ -671,7 +675,10 @@ function ReaderView() {
     goChapter(next);
   }, [countdown, goChapter, next]);
 
-  const sourceName = src?.name ?? selectedVariant?.source ?? title?.sourceName ?? activeSource;
+  // "Version 2" style labels: versions are told apart by number, group, language and edition, never by where they come from
+  const versionNo = (v: ChapterVariant) => (chapter?.variants?.findIndex((x) => variantIdOf(x) === variantIdOf(v)) ?? -1) + 1;
+  const contentLang = chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null;
+  const creditsLine = [selectedVariant?.group?.name ?? chapter?.group?.name, contentLang].filter(Boolean).join(" · ");
 
   // Blueprint v2 "Pull to read next": at the very bottom of a chapter, dragging up past
   // the end by ~90px opens the next chapter. The visible button does the same for taps, mice and keyboards.
@@ -715,7 +722,7 @@ function ReaderView() {
       <div className="reader reader-msg">
         <div className="state state-center">
           <h1 style={{ fontSize: "var(--text-xl)" }}>This chapter isn't readable in Dawghwa yet</h1>
-          <p>No compatible source supplied in-app pages for this chapter. Pick another chapter or version from the title page.</p>
+          <p>No version of this chapter can be read in the app right now. Pick another chapter or version from the title page.</p>
           <div className="cluster">
             <Link className="btn btn-primary" to={backTo}>
               Back to title
@@ -780,7 +787,7 @@ function ReaderView() {
       ) : list.length ? (
         <div className="rd-caught">
           <h2 className="rd-end-title">You're caught up</h2>
-          <p className="rd-end-note">This is the latest chapter on {sourceName}. New chapters show up on Home when they're released.</p>
+          <p className="rd-end-note">New chapters show up on Home when they're released.</p>
         </div>
       ) : null}
 
@@ -820,7 +827,7 @@ function ReaderView() {
         </div>
       )}
 
-      <p className="rd-credits">Credits: {[selectedVariant?.group?.name ?? chapter?.group?.name, `via ${prettySource(sourceName)}`, chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null].filter(Boolean).join(" · ")}</p>
+      {creditsLine && <p className="rd-credits">Credits: {creditsLine}</p>}
       {prev && (
         <div className="rd-end-links">
           <button className="btn btn-ghost" onClick={() => goChapter(prev)}>
@@ -847,7 +854,7 @@ function ReaderView() {
 
   const body = needsChoice ? (
     <div className="state state-center rd-choice" role="alert">
-      <h2>{needsChoice.failed.source} couldn't load this chapter</h2>
+      <h2>This version couldn't load</h2>
       <p>
         The same chapter is available in another edition. Editions can differ in translation and page layout, so Dawghwa
         won't switch without asking.
@@ -855,18 +862,18 @@ function ReaderView() {
       <div className="stack">
         {needsChoice.options.map((v) => (
           <button key={variantIdOf(v)} className="btn" onClick={() => switchVariant(v, "manual")}>
-            Read on {v.source} · {editionLabel(v.edition)} · {languageLabel(v.language ?? chapter?.language)}
+            {[`Try version ${versionNo(v)}`, editionLabel(v.edition), languageLabel(v.language ?? chapter?.language), v.group?.name].filter(Boolean).join(" · ")}
           </button>
         ))}
         <button className="btn btn-ghost" onClick={() => (setNeedsChoice(null), setFailed(new Set()), void pagesQ.refetch())}>
-          <RotateCw size={15} /> Try {needsChoice.failed.source} again
+          <RotateCw size={15} /> Try this version again
         </button>
       </div>
     </div>
   ) : pagesQ.isError ? (
     <div className="state state-center">
-      <ErrorState error={pagesQ.error} retry={() => (setFailed(new Set()), void pagesQ.refetch())} />
-      {chapter && (chapter.variants?.length ?? 0) <= 1 && <p className="muted">No other source has this chapter in the same language.</p>}
+      <ErrorState title="Chapter unavailable" error={pagesQ.error} retry={() => (setFailed(new Set()), void pagesQ.refetch())} />
+      {chapter && (chapter.variants?.length ?? 0) <= 1 && <p className="muted">No other version of this chapter is available in the same language.</p>}
       {errorText(pagesQ.error).offline && <p className="muted">Chapter pages aren't stored offline. Reconnect to keep reading.</p>}
     </div>
   ) : !pagesQ.data ? (
@@ -876,7 +883,7 @@ function ReaderView() {
   ) : !count ? (
     <div className="state state-center">
       <h2>This chapter has no readable pages</h2>
-      <p>{sourceName} did not return any pages{chapter && (chapter.variants?.length ?? 0) > 1 ? ", and no other version in the same language and edition could be used automatically. You can pick a version in the reader settings." : ", and no other source has this chapter in the same language."}</p>
+      <p>This version has no pages{chapter && (chapter.variants?.length ?? 0) > 1 ? ", and no other version in the same language and edition could be used automatically. Try another version in the reader settings." : ", and no other version of this chapter is available in the same language."}</p>
       <Link className="btn" to={backTo}>
         Back to title
       </Link>
@@ -908,7 +915,7 @@ function ReaderView() {
         <div className="rd-titles">
           <span className="rd-series">{title?.title ?? (t.isError ? "Reader" : "Loading…")}</span>
           <span className="rd-chapter">
-            {[chapter ? chapterLabel(chapter) : "", `via ${prettySource(sourceName)}`, chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null, count ? `${Math.min(page, count - 1) + 1} / ${count}` : ""].filter(Boolean).join(" · ")}
+            {[chapter ? chapterLabel(chapter) : "", contentLang, count ? `${Math.min(page, count - 1) + 1} / ${count}` : ""].filter(Boolean).join(" · ")}
           </span>
         </div>
         {target && (
@@ -985,7 +992,7 @@ function ReaderView() {
         )}
         {failures >= 3 && !notice && (
           <div className="banner banner-warn rd-banner" role="status">
-            Several pages failed. Image links from {sourceName} can expire.
+            Several pages failed. Page links can expire.
             <button className="btn btn-sm" onClick={() => (setFailures(0), void pagesQ.refetch())}>
               Reload pages
             </button>
@@ -1132,7 +1139,7 @@ function ReaderView() {
               <span>
                 Chapter version
                 <small className="muted" style={{ display: "block" }}>
-                  Same chapter from another source or translation group. Wording and page splits can differ.
+                  Same chapter from another version or translation group. Wording and page splits can differ.
                 </small>
               </span>
               <select
@@ -1148,7 +1155,7 @@ function ReaderView() {
               >
                 {chapter.variants.map((v) => (
                   <option key={variantIdOf(v)} value={variantIdOf(v)}>
-                    {[v.source, v.group?.name, languageLabel(v.language ?? chapter.language), v.edition === "official" ? "Official" : null, failed.has(variantIdOf(v)) ? "failed" : null].filter(Boolean).join(" · ")}
+                    {[`Version ${versionNo(v)}`, v.group?.name, languageLabel(v.language ?? chapter.language), v.edition === "official" ? "Official" : null, failed.has(variantIdOf(v)) ? "failed" : null].filter(Boolean).join(" · ")}
                   </option>
                 ))}
               </select>
@@ -1264,31 +1271,6 @@ function barHeight(): number {
   return document.querySelector<HTMLElement>(".rd-top")?.offsetHeight ?? 0;
 }
 
-const POS_KEY = "dawghwa.pos.";
-function readPos(chapterId: string): { page: number; offset?: number; t: number } | undefined {
-  try {
-    const v = JSON.parse(localStorage.getItem(POS_KEY + chapterId) ?? "null");
-    return v && typeof v.page === "number" && typeof v.t === "number" ? v : undefined;
-  } catch {
-    return undefined;
-  }
-}
-function writePos(chapterId: string, page: number, offset?: number) {
-  try {
-    localStorage.setItem(POS_KEY + chapterId, JSON.stringify({ page, offset, t: Date.now() }));
-    // keep the mirror small: drop all but the 20 most recent chapters
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith(POS_KEY));
-    if (keys.length > 20)
-      keys
-        .map((k) => [k, readPos(k.slice(POS_KEY.length))?.t ?? 0] as const)
-        .sort((a, b) => a[1] - b[1])
-        .slice(0, keys.length - 20)
-        .forEach(([k]) => localStorage.removeItem(k));
-  } catch {
-    /* storage full or blocked: IndexedDB progress still applies */
-  }
-}
-
 /** The page at the top of the viewport and how far into it (0–1) the reader has scrolled. */
 function measureAnchor(root: HTMLElement): { page: number; offset: number } | null {
   for (const el of root.querySelectorAll<HTMLElement>(".rd-page")) {
@@ -1302,13 +1284,3 @@ function measureAnchor(root: HTMLElement): { page: number; offset: number } | nu
   return null;
 }
 
-/** Source ids ("mangadex") read as names ("MangaDex") when the source list hasn't loaded. */
-function prettySource(name: string): string {
-  const known: Record<string, string> = {
-    mangadex: "MangaDex",
-    anilist: "AniList",
-    comick: "ComicK",
-    mangapill: "MangaPill",
-  };
-  return known[name.toLowerCase()] ?? name.charAt(0).toUpperCase() + name.slice(1);
-}

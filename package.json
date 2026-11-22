@@ -17,6 +17,7 @@
     "e2e:live": "E2E_LIVE=1 playwright test e2e/live-providers.spec.ts",
     "e2e:install": "playwright install chromium",
     "eval:intel": "vitest run src/lib/intel",
+    "eval:replay": "vitest run src/lib/intel/replay.test.ts",
     "android:sync": "node scripts/check-native-env.mjs && npm run build && cap sync android",
     "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "icons": "python3 scripts/brand-assets.py && node scripts/render-android-assets.mjs"

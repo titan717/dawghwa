@@ -12,6 +12,7 @@ import { useBrowse, useChapters, useSources, useTitle, type ChapterList as Chapt
 import { chapterBadge, chapterLabel, editionLabel, findChapter, isChapterRead, languageLabel, pickVariant, variantIdOf } from "@/lib/chapters";
 import { useHead } from "@/lib/seo";
 import { markChaptersRead, rate, setStatus, signal, toggleFavorite, useUser } from "@/lib/store/user";
+import { isIncognito } from "@/lib/store/incognito";
 import type { LibraryStatus } from "@/lib/store/db";
 import { useRankContext } from "@/lib/feed/context";
 import { explain, positivesOf, scoreTitle } from "@/lib/intel/rank";
@@ -241,7 +242,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
           <ArrowDownUp size={15} /> {desc ? "Newest" : "Oldest"}
         </button>
         {readCount > 0 && (
-          <button className="btn btn-sm btn-ghost" onClick={() => void markChaptersRead(title, chapters, false).then(() => toast("Read marks cleared"))}>
+          <button className="btn btn-sm btn-ghost" onClick={() => void markChaptersRead(title, chapters, false).then(() => !isIncognito() && toast("Read marks cleared"))}>
             Clear read
           </button>
         )}

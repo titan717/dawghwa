@@ -3,12 +3,13 @@ import { useOnline } from "@/lib/platform/useOnline";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Clock, Compass, Globe, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { ChevronRight, Clock, Compass, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
 import { Sheet } from "@/components/Layer";
 import type { BrowseOrder, BrowseQuery, MangaKind } from "@/lib/api/types";
 import { TitleCard } from "@/components/TitleCard";
 import { TitleGrid } from "@/components/Grid";
-import { EmptyState, ErrorState, GridSkeleton, RowSkeleton } from "@/components/States";
+import { EmptyState, GridSkeleton, ListSkeleton, RowSkeleton } from "@/components/States";
+import { PartialNote, ResultsError } from "@/components/DiscoveryStates";
 import { Cover } from "@/components/Cover";
 import { parseIntent, type Intent } from "@/lib/search/intent";
 import { runIntent } from "@/lib/search/run";
@@ -75,17 +76,18 @@ function readRecent(pid?: string): string[] {
   }
 }
 
-interface SourceRun {
-  sourceId: string;
-  source: string;
+interface WideRun {
   items: Title[];
-  error?: string;
-  durationMs?: number;
+  failed: boolean;
 }
 
-/** Multi-source title search over the NDJSON stream, started explicitly (it hits every provider). */
-function AllSources({ q }: { q: string }) {
-  const [runs, setRuns] = useState<SourceRun[]>([]);
+/**
+ * Wider title search over the NDJSON stream, started explicitly (it is slower than the
+ * catalogue search). Results are merged into one list; where they came from is never shown,
+ * and a part that fails only adds a quiet generic note.
+ */
+function MoreResults({ q, exclude }: { q: string; exclude: Set<string> }) {
+  const [runs, setRuns] = useState<WideRun[]>([]);
   const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
   const [err, setErr] = useState<unknown>();
   const ac = useRef<AbortController | null>(null);
@@ -105,8 +107,8 @@ function AllSources({ q }: { q: string }) {
       await streamSearch(q, {
         signal: c.signal,
         onLine: (l) => {
-          const items = l.results.map((r) => fromResult(r, l.sourceId, l.source)).sort((a, b) => textScore(b, q) - textScore(a, q));
-          setRuns((r) => [...r, { sourceId: l.sourceId, source: l.source, items, error: l.error, durationMs: l.durationMs }]);
+          const items = l.results.map((r) => fromResult(r, l.sourceId));
+          setRuns((r) => [...r, { items, failed: Boolean(l.error) }]);
         },
       });
       if (!c.signal.aborted) setState("done");
@@ -116,42 +118,46 @@ function AllSources({ q }: { q: string }) {
       setState("error");
     }
   };
+  const items = useMemo(() => {
+    const seen = new Set(exclude);
+    return runs
+      .flatMap((r) => r.items)
+      .filter((t) => !seen.has(t.key) && seen.add(t.key))
+      .sort((a, b) => textScore(b, q) - textScore(a, q))
+      .slice(0, 30);
+  }, [runs, exclude, q]);
+  const someFailed = runs.some((r) => r.failed);
   if (state === "idle")
     return (
       <div className="inline-state">
-        <Globe size={18} />
-        <span style={{ flex: 1 }}>Not finding it? Search every connected source for "{q}". Results stream in as each source answers.</span>
+        <SearchIcon size={18} aria-hidden="true" />
+        <span style={{ flex: 1 }}>Not finding it? Look further for "{q}". This can take a little longer.</span>
         <button className="btn btn-sm" onClick={() => void start()}>
-          Search all sources
+          Search more
         </button>
       </div>
     );
-  const found = runs.filter((r) => r.items.length);
-  const failed = runs.filter((r) => r.error);
   return (
-    <section className="section" aria-live="polite">
+    <section className="section" aria-labelledby="more-h" aria-busy={state === "running"}>
       <div className="section-head">
-        <div>
-          <h2>All sources</h2>
-          <p>
-            {state === "running" ? `Searching... ${runs.length} sources answered` : `${runs.length} sources answered, ${found.length} with matches`}
-            {failed.length ? `, ${failed.length} unavailable` : ""}
-          </p>
+        <div className="section-titles">
+          <h2 id="more-h">More results</h2>
+          <p aria-live="polite">{state === "running" ? "Searching..." : state === "done" ? (items.length ? `${items.length} more ${items.length === 1 ? "title" : "titles"}` : `No more matches for "${q}"`) : ""}</p>
         </div>
         {state === "running" && (
-          <button className="btn btn-sm" onClick={() => ac.current?.abort()}>
+          <button className="btn btn-sm" onClick={() => (ac.current?.abort(), setState("done"))}>
             Stop
           </button>
         )}
       </div>
-      {state === "error" && <ErrorState error={err} retry={() => void start()} compact />}
-      <div className="stack">
-        {found.map((r) => (
-          <div key={r.sourceId} className="list">
-            <div className="eyebrow" style={{ padding: "8px 0" }}>
-              {r.source} · {r.items.length}
-            </div>
-            {r.items.slice(0, 5).map((t) => (
+      {state === "error" && !items.length ? (
+        <ResultsError error={err} retry={() => void start()} compact />
+      ) : state === "running" && !items.length ? (
+        <ListSkeleton rows={3} />
+      ) : (
+        items.length > 0 && (
+          <div className="list">
+            {items.map((t) => (
               <Link key={t.key} className="list-item" to={titlePath(t)}>
                 <Cover mature={isMature(t)} src={t.cover} title={t.title} sizes="48px" className="cover-sm" />
                 <span style={{ minWidth: 0 }}>
@@ -161,9 +167,10 @@ function AllSources({ q }: { q: string }) {
               </Link>
             ))}
           </div>
-        ))}
-      </div>
-      {failed.length > 0 && <p className="source-status muted">Unavailable: {failed.map((f) => f.source).join(", ")}</p>}
+        )
+      )}
+      {state !== "running" && items.length > 0 && (someFailed || state === "error") && <PartialNote retry={() => void start()} />}
+      {state === "done" && !items.length && someFailed && <PartialNote retry={() => void start()} />}
     </section>
   );
 }
@@ -307,6 +314,7 @@ export default function Search() {
   const hitKeys = new Set(titleHits.map((t) => t.key));
   const items = (structured ? intentQ.data?.items?.filter((t) => !hitKeys.has(t.key)) : textItems)?.filter((t) => !ctx.exclude?.has(t.key)) ?? [];
   const active = structured ? intentQ : textQ;
+  const shownKeys = useMemo(() => new Set(textItems.map((t) => t.key)), [textItems]);
   // the catalogue call failed at the network layer: every other source goes through the same API
   const apiUnreachable = (() => {
     const e = active.isError ? toApiError(active.error) : undefined;
@@ -556,19 +564,20 @@ export default function Search() {
             </p>
           )}
           {active.isError && !items.length ? (
-            <ErrorState error={active.error} retry={() => void active.refetch()} />
+            <ResultsError error={active.error} retry={() => void active.refetch()} />
           ) : pending || active.isLoading || (structured && !intentQ.data) ? (
             <GridSkeleton count={12} />
           ) : !items.length ? (
             <EmptyState title={q ? `Nothing found for "${q}"` : "Nothing matches these filters"} action={filterCount > 0 ? <button className="btn" onClick={clearFilters}>Clear filters</button> : undefined}>
-              {structured ? "Try fewer filters, or rephrase. Filters marked on device can only check titles that were fetched." : "Check the spelling, or search all sources below."}
+              {structured ? "Try fewer filters, or rephrase. Filters marked on device can only check titles that were fetched." : "Check the spelling, or search more widely below."}
             </EmptyState>
           ) : (
             <TitleGrid items={items} context="search" highlight={structured ? undefined : q} />
           )}
+          {active.isError && items.length > 0 && <PartialNote retry={() => void active.refetch()} />}
           {!structured && q.length >= 2 && online && !apiUnreachable && !active.isError && (
-            <div style={{ marginTop: 28 }}>
-              <AllSources q={q} />
+            <div className="more-results">
+              <MoreResults q={q} exclude={shownKeys} />
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Dices } from "lucide-react";
 import { Cover } from "@/components/Cover";
 import { Kicker } from "@/components/Editorial";
-import { ErrorState } from "@/components/States";
+import { ResultsError } from "@/components/DiscoveryStates";
 import { toast } from "@/components/Toast";
 import { useRankContext } from "@/lib/feed/context";
 import { surprise } from "@/lib/intel/rank";
@@ -29,7 +29,7 @@ const FORMATS = [
 
 const SHELVES = [
   { to: "/discover?order=popular&new=365", label: "Rising this year", note: "Most followed, added in the last 12 months" },
-  { to: "/discover?order=rating", label: "Highest rated", note: "By reader rating on MangaDex" },
+  { to: "/discover?order=rating", label: "Highest rated", note: "By reader rating" },
   { to: "/discover?order=latest", label: "New chapters", note: "Most recently updated" },
   { to: "/discover?status=completed&order=latest", label: "Completed", note: "Finished series, start to end" },
   { to: "/discover?order=new", label: "Newly added", note: "Latest additions to the catalogue" },
@@ -114,7 +114,7 @@ export function DiscoverHub() {
           <Dices size={18} /> Surprise me
         </button>
       </header>
-      {a.isError && !a.data && <ErrorState error={a.error} retry={() => void a.refetch()} compact />}
+      {a.isError && !a.data && <ResultsError error={a.error} retry={() => void a.refetch()} compact />}
 
       <section className="section" aria-labelledby="hub-genres">
         <div className="section-head">
