@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { db, getCachedTitles, kvGet, kvSet } from "../store/db";
+import { db, getCachedTitles, kvGet, kvSet, writesPaused } from "../store/db";
 import { getUser, profileEvents, subscribeUser } from "../store/user";
 import type { Title } from "../titles";
 import { deserialize, serialize, train, type LearnerState, type SerializedState } from "./learner";
@@ -113,6 +113,7 @@ export async function retrain(profileId = getUser().profile?.id): Promise<void> 
   if (getUser().profile?.id !== profileId) return; // profile switched meanwhile
   current = s;
   emit();
+  if (writesPaused()) return; // Incognito: the model is not saved
   await (await db()).put("intel", { profileId, state: serialize(s), updatedAt: Date.now() });
 }
 

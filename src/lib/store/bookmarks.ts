@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { localStore, onIncognitoExit } from "../privacy/incognito";
 
 /**
  * Page bookmarks, stored locally (works offline, survives reloads). Keyed by
@@ -24,7 +25,7 @@ let cache: Record<string, Bookmark[]> | undefined;
 function load(): Record<string, Bookmark[]> {
   if (cache) return cache;
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? "{}") as unknown;
+    const v = JSON.parse(localStore.get(KEY) ?? "{}") as unknown;
     cache = v && typeof v === "object" ? (v as Record<string, Bookmark[]>) : {};
   } catch {
     cache = {};
@@ -34,13 +35,15 @@ function load(): Record<string, Bookmark[]> {
 
 function persist(next: Record<string, Bookmark[]>) {
   cache = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* storage full / blocked: keep in memory for this session */
-  }
+  // storage full / blocked / Incognito: kept in memory for this session
+  localStore.set(KEY, JSON.stringify(next));
   listeners.forEach((l) => l());
 }
+
+onIncognitoExit(() => {
+  cache = undefined;
+  listeners.forEach((l) => l());
+});
 
 export function bookmarksFor(titleKey: string): Bookmark[] {
   return load()[titleKey] ?? [];

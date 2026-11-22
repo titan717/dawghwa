@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { isIncognito } from "../privacy/incognito";
 import type { Title } from "../titles";
 
 /**
@@ -189,14 +190,18 @@ export function resetDbForTests() {
 export async function kvGet<T>(key: string): Promise<T | undefined> {
   return (await (await db()).get("kv", key))?.value as T | undefined;
 }
+/** Incognito pauses every private write (src/lib/privacy/incognito.ts). Callers keep the change in memory. */
+export const writesPaused = (): boolean => isIncognito();
+
 export async function kvSet(key: string, value: unknown): Promise<void> {
+  if (writesPaused()) return;
   await (await db()).put("kv", { key, value });
 }
 
 const TITLE_CACHE_MAX = 3000;
 
 export async function cacheTitles(titles: Title[]): Promise<void> {
-  if (!titles.length) return;
+  if (!titles.length || writesPaused()) return;
   const d = await db();
   const tx = d.transaction("titles", "readwrite");
   const now = Date.now();

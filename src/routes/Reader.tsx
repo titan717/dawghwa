@@ -27,6 +27,8 @@ import type { Chapter, ChapterPage, ChapterVariant } from "@/lib/api/types";
 import { api } from "@/lib/api/endpoints";
 import { chapterAliases, chapterBadge, chapterLabel, editionLabel, fallbackPlan, findChapter, isChapterRead, languageLabel, mapPosition, pickVariant, variantIdOf } from "@/lib/chapters";
 import { isBookmarked, removeBookmark, toggleBookmark, useBookmarks } from "@/lib/store/bookmarks";
+import { readPos, writePos } from "@/lib/readerPosition";
+import { IncognitoToggle } from "@/components/Incognito";
 
 /**
  * Scroll-only reader (D8). The top bar slides away on scroll-down and comes back on
@@ -90,10 +92,16 @@ function PageImage({ page, eager, onFail, onLoad, ratio }: { page: ChapterPage; 
 
 /** A PIN-protected profile must be signed into first (D29). */
 export default function Reader() {
-  return useSignInRequired() ? <SignIn /> : <ReaderView />;
+  const locked = useSignInRequired();
+  const profileId = useUser((s) => s.profile?.id);
+  // Switching profile mid-chapter remounts the reader for the new profile, so it
+  // restores that profile's own position and never inherits the previous one's.
+  const [openedAs] = useState(profileId);
+  const switched = Boolean(openedAs) && profileId !== openedAs;
+  return locked ? <SignIn /> : <ReaderView key={profileId ?? ""} ignoreLinkedPage={switched} />;
 }
 
-function ReaderView() {
+function ReaderView({ ignoreLinkedPage = false }: { ignoreLinkedPage?: boolean }) {
   const { source = "", id = "", chapterId = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const nav = useNavigate();
@@ -103,6 +111,7 @@ function ReaderView() {
   const title = t.data;
   const chapters = useChapters(title);
   const prog = useUser((s) => (title ? s.progress.get(title.key) : undefined));
+  const profileId = useUser((s) => s.profile?.id);
   const rating = useUser((s) => (title ? s.library.get(title.key)?.rating : undefined));
   const [pageRefreshKey, setPageRefreshKey] = useState(0);
 
@@ -141,9 +150,10 @@ function ReaderView() {
   const next = idx >= 0 ? list[idx + 1] : undefined;
 
   // a synchronous position mirror covers reloads that land before the IndexedDB write commits
-  const mirror = chapterKey ? readPos(chapterKey) : undefined;
+  const mirror = chapterKey ? readPos(profileId, chapterKey) : undefined;
   const fresh = mirror && (!sameChapter(prog?.chapterId) || mirror.t > (prog?.updatedAt ?? 0)) ? mirror : undefined;
-  const paramPage = Number(params.get("p") ?? (fresh ? fresh.page : sameChapter(prog?.chapterId) ? prog!.page : 0)) || 0;
+  const linkedPage = ignoreLinkedPage ? null : params.get("p");
+  const paramPage = Number(linkedPage ?? (fresh ? fresh.page : sameChapter(prog?.chapterId) ? prog!.page : 0)) || 0;
   const carried = carry && carry.variantId === activeVariantId && count ? mapPosition(carry.page, carry.count, count) : undefined;
   const startPage = carried ? carried.page : paramPage;
   const [page, setPage] = useState(startPage);
@@ -271,8 +281,9 @@ function ReaderView() {
       if (scroller.current && !pinning.current) anchor.current = measureAnchor(scroller.current) ?? anchor.current;
       const a = anchor.current;
       const p = Math.min(a ? a.page : latest.current.page, count - 1);
-      writePos(chapter.id, p, a?.offset);
+      writePos(profileId, chapter.id, p, a?.offset);
       void saveProgress({
+        profileId,
         title,
         chapterId: chapter.id,
         variantId: selectedVariant ? variantIdOf(selectedVariant) : undefined,
@@ -288,7 +299,7 @@ function ReaderView() {
         lastChapterNumber: list.at(-1)?.number,
       });
     },
-    [title, chapter, count, list, selectedVariant],
+    [title, chapter, count, list, selectedVariant, profileId],
   );
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -880,6 +891,7 @@ function ReaderView() {
             {auto.state === "running" ? <Pause size={20} /> : <Play size={20} />}
           </button>
         )}
+        <IncognitoToggle className="rd-incog" />
         <button className="icon-btn" aria-label="Reader settings" aria-haspopup="dialog" onClick={() => setPanel(true)}>
           <Settings2 size={20} />
         </button>
@@ -1206,31 +1218,6 @@ function RewardBeat({ m }: { m: Moment }) {
 /** Height of the fixed reader bar, so restored positions land below it. */
 function barHeight(): number {
   return document.querySelector<HTMLElement>(".rd-top")?.offsetHeight ?? 0;
-}
-
-const POS_KEY = "dawghwa.pos.";
-function readPos(chapterId: string): { page: number; offset?: number; t: number } | undefined {
-  try {
-    const v = JSON.parse(localStorage.getItem(POS_KEY + chapterId) ?? "null");
-    return v && typeof v.page === "number" && typeof v.t === "number" ? v : undefined;
-  } catch {
-    return undefined;
-  }
-}
-function writePos(chapterId: string, page: number, offset?: number) {
-  try {
-    localStorage.setItem(POS_KEY + chapterId, JSON.stringify({ page, offset, t: Date.now() }));
-    // keep the mirror small: drop all but the 20 most recent chapters
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith(POS_KEY));
-    if (keys.length > 20)
-      keys
-        .map((k) => [k, readPos(k.slice(POS_KEY.length))?.t ?? 0] as const)
-        .sort((a, b) => a[1] - b[1])
-        .slice(0, keys.length - 20)
-        .forEach(([k]) => localStorage.removeItem(k));
-  } catch {
-    /* storage full or blocked: IndexedDB progress still applies */
-  }
 }
 
 /** The page at the top of the viewport and how far into it (0–1) the reader has scrolled. */

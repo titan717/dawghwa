@@ -1,4 +1,5 @@
 import { isNative } from "@/lib/platform";
+import { localStore } from "@/lib/privacy/incognito";
 import type { ProfileRecord } from "@/lib/store/db";
 import { isStandalone } from "./install";
 
@@ -19,11 +20,8 @@ export function hasEntered(): boolean {
 }
 
 export function markEntered() {
-  try {
-    localStorage.setItem(ENTERED_KEY, "1");
-  } catch {
-    /* private mode: the landing shows again next visit, which is harmless */
-  }
+  // private mode or Incognito: the landing shows again next visit, which is harmless
+  localStore.set(ENTERED_KEY, "1");
 }
 
 export function shouldShowLanding(profile: ProfileRecord | null, search = typeof location !== "undefined" ? location.search : ""): boolean {

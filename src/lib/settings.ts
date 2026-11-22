@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { localStore, onIncognitoExit } from "./privacy/incognito";
 import { kvGet, kvSet } from "./store/db";
 
 /**
@@ -61,7 +62,7 @@ const subs = new Set<() => void>();
 
 function readLocal(): Partial<Settings> {
   try {
-    return JSON.parse(localStorage.getItem("dawghwa:settings") ?? "{}") as Partial<Settings>;
+    return JSON.parse(localStore.get("dawghwa:settings") ?? "{}") as Partial<Settings>;
   } catch {
     return {};
   }
@@ -74,17 +75,20 @@ export async function loadSettings() {
   subs.forEach((s) => s());
 }
 
+// Incognito ended: settings changed during the session are discarded
+onIncognitoExit(() => {
+  settings = { ...DEFAULT_SETTINGS, ...migrateSettings(readLocal()) };
+  return loadSettings();
+});
+
 export function getSettings() {
   return settings;
 }
 
 export function updateSettings(patch: Partial<Settings>) {
   settings = { ...settings, ...patch };
-  try {
-    localStorage.setItem("dawghwa:settings", JSON.stringify(settings));
-  } catch {
-    /* storage may be unavailable */
-  }
+  // Incognito: both writes are skipped and the change lasts for this session
+  localStore.set("dawghwa:settings", JSON.stringify(settings));
   void kvSet("settings", settings).catch(() => undefined);
   applyTheme();
   subs.forEach((s) => s());

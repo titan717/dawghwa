@@ -25,6 +25,8 @@ import { titlePath } from "@/lib/titles";
 import { isNative, platformName } from "@/lib/platform";
 import { monthRecap, recapLine } from "@/lib/profile/recap";
 import { isValidPin, setPin, signOut, verifyPin } from "@/lib/store/accounts";
+import { IncognitoPanel } from "@/components/Incognito";
+import { useIncognito } from "@/lib/privacy/incognito";
 import faceUrl from "@/assets/mascot/head.webp";
 
 function TasteDna() {
@@ -218,6 +220,7 @@ function ReaderCard({ stats }: { stats: ReadingStats }) {
 /** Optional sign-in PIN for this reader (D4, D29). */
 function PinSettings() {
   const profile = useUser((s) => s.profile)!;
+  const incognito = useIncognito();
   const [mode, setMode] = useState<null | "set" | "remove">(null);
   const [cur, setCur] = useState("");
   const [next, setNext] = useState("");
@@ -239,11 +242,11 @@ function PinSettings() {
           <span className="hint">{profile.pin ? "On. Asked when this reader opens. A privacy curtain, not encryption." : "Off. Add one if others use this device."}</span>
         </span>
         <span className="cluster">
-          <button className="btn btn-sm" onClick={() => setMode("set")}>
+          <button className="btn btn-sm" disabled={incognito} onClick={() => setMode("set")}>
             {profile.pin ? "Change" : "Add PIN"}
           </button>
           {profile.pin && (
-            <button className="btn btn-sm btn-ghost" onClick={() => setMode("remove")}>
+            <button className="btn btn-sm btn-ghost" disabled={incognito} onClick={() => setMode("remove")}>
               Remove
             </button>
           )}
@@ -340,6 +343,7 @@ export default function Profile() {
   const [newOpen, setNewOpen] = useState(false);
   const [name, setName] = useState("");
   const [confirm, setConfirm] = useState<null | "reset" | "delete">(null);
+  const incognito = useIncognito();
   const progress = useUser((s) => s.progress);
   const library = useUser((s) => s.library);
   const stats = useMemo(() => readingStats(progress.values(), library.values(), titles), [progress, library, titles]);
@@ -413,6 +417,7 @@ export default function Profile() {
       <h2 className="settings-title" id="settings">
         Settings
       </h2>
+      <IncognitoPanel />
       <section className="settings-group" id="rewards" aria-labelledby="rewards-h">
         <h3 id="rewards-h">Rewards</h3>
         <label className="switch settings-row">
@@ -438,7 +443,7 @@ export default function Profile() {
               {p.name}
             </button>
           ))}
-          <button className="chip" onClick={() => setNewOpen(true)}>
+          <button className="chip" disabled={incognito} onClick={() => setNewOpen(true)}>
             <Plus size={15} /> New reader
           </button>
         </div>
@@ -462,7 +467,7 @@ export default function Profile() {
             <LogOut size={15} aria-hidden="true" /> Sign out
           </button>
           {profiles.length > 1 && (
-            <button className="btn btn-sm btn-ghost" onClick={() => setConfirm("delete")}>
+            <button className="btn btn-sm btn-ghost" disabled={incognito} onClick={() => setConfirm("delete")}>
               <Trash2 size={15} /> Delete profile
             </button>
           )}
@@ -541,7 +546,7 @@ export default function Profile() {
           <button className="btn" onClick={() => void exportProfile().then((d) => downloadJson(`dawghwa-${profile.name.replace(/\W+/g, "-").toLowerCase()}.json`, d))}>
             <Download size={16} /> Export profile
           </button>
-          <button className="btn" onClick={() => file.current?.click()}>
+          <button className="btn" disabled={incognito} onClick={() => file.current?.click()}>
             <Upload size={16} /> Import
           </button>
           <input
@@ -561,7 +566,7 @@ export default function Profile() {
               }
             }}
           />
-          <button className="btn btn-ghost" onClick={() => setConfirm("reset")}>
+          <button className="btn btn-ghost" disabled={incognito} onClick={() => setConfirm("reset")}>
             <RotateCcw size={16} /> Reset recommendations
           </button>
         </div>

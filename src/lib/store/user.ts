@@ -1,7 +1,9 @@
 import { chapterAliases } from "@/lib/chapters";
 import { useSyncExternalStore } from "react";
+import { onIncognitoExit } from "../privacy/incognito";
+import { migratePositions } from "../readerPosition";
 import type { Title } from "../titles";
-import { cacheTitles, db, getCachedTitles, kvGet, kvSet, type EventRecord, type Hidden, type LibraryRecord, type LibraryStatus, type ProfileRecord, type ProgressRecord } from "./db";
+import { cacheTitles, db, getCachedTitles, kvGet, kvSet, writesPaused, type EventRecord, type Hidden, type LibraryRecord, type LibraryStatus, type ProfileRecord, type ProgressRecord } from "./db";
 
 /**
  * In-memory view of the active profile's private data, backed by IndexedDB.
@@ -124,10 +126,12 @@ async function activate(profile: ProfileRecord, profiles?: ProfileRecord[]) {
   const keys = [...new Set([...lib.map((r) => r.titleKey), ...prog.map((r) => r.titleKey), ...recent, ...finished])];
   const titles = await getCachedTitles(keys);
   await kvSet("activeProfile", profile.id);
+  const all = profiles ?? (await d.getAll("profiles"));
+  migratePositions(all.map((p) => p.id));
   set({
     ready: true,
     profile,
-    profiles: profiles ?? (await d.getAll("profiles")),
+    profiles: all,
     library: new Map(lib.map((r) => [r.titleKey, r])),
     progress: new Map(prog.map((r) => [r.titleKey, r])),
     hidden: new Map(hid.map((r) => [r.titleKey, r])),
@@ -143,7 +147,16 @@ export async function switchProfile(id: string) {
   if (p) await activate(p);
 }
 
+/** Profile management needs real storage; Incognito would silently lose it, so it is refused. */
+export class IncognitoError extends Error {
+  constructor(what: string) {
+    super(`Turn off Incognito to ${what}.`);
+    this.name = "IncognitoError";
+  }
+}
+
 export async function createProfile(name: string): Promise<ProfileRecord> {
+  if (writesPaused()) throw new IncognitoError("add a profile");
   const d = await db();
   const p = newProfile(name, state.profiles.length);
   await d.put("profiles", p);
@@ -154,12 +167,14 @@ export async function createProfile(name: string): Promise<ProfileRecord> {
 export async function updateProfile(patch: Partial<Omit<ProfileRecord, "id">>) {
   if (!state.profile) return;
   const p = { ...state.profile, ...patch, updatedAt: Date.now() };
-  await (await db()).put("profiles", p);
+  // Incognito: the change lasts for this session only
+  if (!writesPaused()) await (await db()).put("profiles", p);
   set({ profile: p, profiles: state.profiles.map((x) => (x.id === p.id ? p : x)) });
 }
 
 /** Delete a profile and every private record it owns. */
 export async function deleteProfile(id: string) {
+  if (writesPaused()) throw new IncognitoError("delete a profile");
   const d = await db();
   if (state.profiles.length <= 1) throw new Error("Keep at least one profile");
   const tx = d.transaction(["profiles", "library", "progress", "hidden", "events", "comments", "intel"], "readwrite");
@@ -172,6 +187,7 @@ export async function deleteProfile(id: string) {
   await tx.objectStore("intel").delete(id);
   await tx.done;
   const profiles = state.profiles.filter((p) => p.id !== id);
+  migratePositions(profiles.map((p) => p.id));
   if (state.profile?.id === id) await activate(profiles[0]!, profiles);
   else set({ profiles });
 }
@@ -187,6 +203,8 @@ export async function rememberTitle(t: Title) {
 export async function signal(kind: SignalKind, t: Title | undefined, titleKey = t?.key, extra: { value?: number; context?: string } = {}) {
   const profile = state.profile;
   if (!profile || !titleKey) return;
+  // Incognito: no event is logged, kept in memory or sent to the recommender
+  if (writesPaused()) return;
   if (t) await rememberTitle(t);
   const e: EventRecord = { profileId: profile.id, seq: ++seq, kind, titleKey, at: Date.now(), ...extra };
   await (await db()).put("events", e);
@@ -204,11 +222,12 @@ export async function profileEvents(profileId = state.profile?.id): Promise<Even
 async function putLibrary(rec: LibraryRecord | null, key: string) {
   const d = await db();
   const library = new Map(state.library);
+  const paused = writesPaused();
   if (rec && (rec.status || rec.favorite || rec.rating || rec.collections.length)) {
-    await d.put("library", rec);
+    if (!paused) await d.put("library", rec);
     library.set(key, rec);
   } else if (state.profile) {
-    await d.delete("library", [state.profile.id, key]);
+    if (!paused) await d.delete("library", [state.profile.id, key]);
     library.delete(key);
   }
   set({ library });
@@ -267,7 +286,7 @@ export function allCollections(s: UserState = state): string[] {
 export async function hideTitle(t: Title, reason: Hidden["reason"]) {
   if (!state.profile) return;
   const rec: Hidden = { profileId: state.profile.id, titleKey: t.key, reason, at: Date.now() };
-  await (await db()).put("hidden", rec);
+  if (!writesPaused()) await (await db()).put("hidden", rec);
   const hidden = new Map(state.hidden);
   hidden.set(t.key, rec);
   set({ hidden });
@@ -276,7 +295,7 @@ export async function hideTitle(t: Title, reason: Hidden["reason"]) {
 
 export async function unhideTitle(key: string) {
   if (!state.profile) return;
-  await (await db()).delete("hidden", [state.profile.id, key]);
+  if (!writesPaused()) await (await db()).delete("hidden", [state.profile.id, key]);
   const hidden = new Map(state.hidden);
   hidden.delete(key);
   set({ hidden });
@@ -286,6 +305,12 @@ export async function unhideTitle(key: string) {
 // ----------------------------------------------------------------- progress
 
 export interface ProgressUpdate {
+  /**
+   * The profile this position was read under. If another profile is active by the
+   * time the save runs (switched mid-chapter), the save is dropped instead of
+   * leaking the position into the new profile.
+   */
+  profileId?: string;
   title: Title;
   chapterId: string;
   /** Provider version being read; lets resume reopen the same source. */
@@ -313,7 +338,7 @@ const RETURN_GAP_MS = 6 * 3600 * 1000;
  */
 export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | undefined> {
   const profile = state.profile;
-  if (!profile) return;
+  if (!profile || (u.profileId && u.profileId !== profile.id)) return;
   const now = Date.now();
   const prev = state.progress.get(u.title.key);
   const read = { ...(prev?.read ?? {}) };
@@ -338,7 +363,7 @@ export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | 
     updatedAt: now,
   };
   await rememberTitle(u.title);
-  await (await db()).put("progress", rec);
+  if (!writesPaused()) await (await db()).put("progress", rec);
   const progress = new Map(state.progress);
   progress.set(u.title.key, rec);
   set({ progress });
@@ -368,7 +393,7 @@ export async function markChaptersRead(t: Title, chapters: { id: string; number:
     ? { ...prev, read: map, maxReadNumber: read ? Math.max(prev.maxReadNumber, latest.number) : prev.maxReadNumber, updatedAt: now }
     : { profileId: profile.id, titleKey: t.key, chapterId: latest.id, chapterNumber: latest.number, page: 0, pageCount: 0, fraction: read ? 1 : 0, read: map, maxReadNumber: read ? latest.number : 0, startedAt: now, updatedAt: now };
   await rememberTitle(t);
-  await (await db()).put("progress", rec);
+  if (!writesPaused()) await (await db()).put("progress", rec);
   const progress = new Map(state.progress);
   progress.set(t.key, rec);
   set({ progress });
@@ -394,6 +419,15 @@ export async function clearHistory() {
   set({ progress: new Map() });
 }
 
+/**
+ * Incognito ended: drop this session's in-memory library, progress and hidden
+ * changes by reloading the active profile from storage.
+ */
+export async function reloadActiveProfile() {
+  const id = state.profile?.id;
+  if (id) await switchProfile(id);
+}
+
 /** Continue-reading order: recent activity first; long-idle brief tries sink. */
 export function continueList(s: UserState = state): ProgressRecord[] {
   const now = Date.now();
@@ -408,3 +442,5 @@ export function continueList(s: UserState = state): ProgressRecord[] {
     .sort((a, b) => b.score - a.score)
     .map((x) => x.p);
 }
+
+onIncognitoExit(reloadActiveProfile);

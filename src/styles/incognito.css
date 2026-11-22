@@ -1,0 +1,56 @@
+/* Incognito controls (src/components/Incognito.tsx). State is shown with text, never colour alone. */
+.incog-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid transparent;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 640;
+  flex: none;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+}
+.incog-toggle:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.incog-toggle.is-on {
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+.incog-toggle-label {
+  line-height: 1;
+}
+.incog-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--gutter);
+  font-size: var(--text-sm);
+  font-weight: 560;
+  color: var(--ink);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line-strong);
+}
+.incog-notice .btn {
+  margin-left: auto;
+}
+.incog-panel .incog-not {
+  margin-top: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .incog-toggle {
+    transition: none;
+  }
+}
+:root[data-reduce-motion] .incog-toggle {
+  transition: none;
+}

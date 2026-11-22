@@ -1,5 +1,5 @@
-import { cacheTitles, db, getCachedTitles, type CommentRecord, type EventRecord, type Hidden, type LibraryRecord, type ProfileRecord, type ProgressRecord } from "./db";
-import { getUser, newProfile, switchProfile } from "./user";
+import { cacheTitles, db, writesPaused, getCachedTitles, type CommentRecord, type EventRecord, type Hidden, type LibraryRecord, type ProfileRecord, type ProgressRecord } from "./db";
+import { getUser, IncognitoError, newProfile, switchProfile } from "./user";
 import type { Title } from "../titles";
 import { MAX_COMMENT } from "../comments";
 import { questSeedOf } from "../rewards/quests";
@@ -56,6 +56,7 @@ function isExport(x: unknown): x is ProfileExport {
 
 /** Import as a new profile (never merges into or overwrites an existing one). */
 export async function importProfile(json: string): Promise<ProfileRecord> {
+  if (writesPaused()) throw new IncognitoError("import a profile");
   let data: unknown;
   try {
     data = JSON.parse(json);

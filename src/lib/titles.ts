@@ -1,4 +1,5 @@
 import type { MangaKind, MangaMetadata, SearchResult } from "./api/types";
+import { localStore } from "./privacy/incognito";
 
 /**
  * Dawghwa's canonical title snapshot. Built only from API data; fields the API
@@ -129,7 +130,7 @@ export function plainText(md: string): string {
 const UNREADABLE_KEY = "dawghwa.unreadable";
 function unreadableSet(): Record<string, number> {
   try {
-    return JSON.parse(localStorage.getItem(UNREADABLE_KEY) ?? "{}") as Record<string, number>;
+    return JSON.parse(localStore.get(UNREADABLE_KEY) ?? "{}") as Record<string, number>;
   } catch {
     return {};
   }
@@ -139,11 +140,8 @@ export function markUnreadable(key: string) {
   if (all[key]) return;
   all[key] = Date.now();
   const keep = Object.entries(all).sort((a, b) => b[1] - a[1]).slice(0, 300);
-  try {
-    localStorage.setItem(UNREADABLE_KEY, JSON.stringify(Object.fromEntries(keep)));
-  } catch {
-    /* storage blocked: the hero simply keeps its default order */
-  }
+  // storage blocked or Incognito: the hero simply keeps its default order
+  localStore.set(UNREADABLE_KEY, JSON.stringify(Object.fromEntries(keep)));
 }
 /** Known-unreadable within the last week (chapters can appear later). */
 export function isKnownUnreadable(key: string): boolean {

@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { db, type CommentRecord } from "./store/db";
+import { onIncognitoExit } from "./privacy/incognito";
+import { db, writesPaused, type CommentRecord } from "./store/db";
 import { getUser, signal, subscribeUser } from "./store/user";
 import type { Title } from "./titles";
 
@@ -32,6 +33,12 @@ subscribeUser(() => {
   const id = getUser().profile?.id;
   if (id === profileId) return;
   profileId = id;
+  cache.clear();
+  bump();
+});
+
+// Incognito ended: forget session-only comments and reload what is stored
+onIncognitoExit(() => {
   cache.clear();
   bump();
 });
@@ -89,7 +96,7 @@ export async function addComment(input: { title: Title; chapterId: string; chapt
   if (!pid || !body) return;
   const now = Date.now();
   const rec: CommentRecord = { profileId: pid, id: newId(), titleKey: input.title.key, chapterId: input.chapterId, chapterNumber: input.chapterNumber, body, parentId: input.parentId, at: now, updatedAt: now };
-  await (await db()).put("comments", rec);
+  if (!writesPaused()) await (await db()).put("comments", rec);
   put(rec);
   // The event feeds quests and the "Margin notes" set; the recommender ignores it.
   await signal("comment", input.title, input.title.key, { context: input.chapterId });
@@ -98,7 +105,7 @@ export async function addComment(input: { title: Title; chapterId: string; chapt
 
 async function patch(c: CommentRecord, change: Partial<CommentRecord>) {
   const rec = { ...c, ...change, updatedAt: Date.now() };
-  await (await db()).put("comments", rec);
+  if (!writesPaused()) await (await db()).put("comments", rec);
   put(rec);
   return rec;
 }
