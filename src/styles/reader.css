@@ -173,50 +173,179 @@
   padding-top: 0;
 }
 
+/* blueprint v2 reader end (pages 2-4): a flat grey sheet under the last page with the
+   Creator credit and a Next card; then TOP and "Pull to read next" on the stage. */
 .rd-end {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
   min-height: 60dvh;
-  padding: var(--space-12) var(--gutter) calc(var(--space-16) + var(--safe-bottom));
-  text-align: center;
+  padding-bottom: calc(96px + var(--safe-bottom)); /* clears the floating chapter bar */
+  background: #171717;
+  color: #fff;
 }
-.rd-end-mascot {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--frame);
+[data-theme="light"] .rd-end {
+  background: var(--bg);
+  color: var(--ink);
+}
+.rd-end-sheet {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) 20px var(--space-6);
+  background: #1e1e1e;
+}
+[data-theme="light"] .rd-end-sheet {
   background: var(--surface);
 }
 .rd-end-kicker {
   margin: 0;
-  font-family: var(--font-display);
-  font-stretch: var(--label-stretch);
-  font-weight: 800;
+  font-weight: 600;
   font-size: var(--text-xs);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-3);
 }
 .rd-end-kicker .ch-no {
   font-size: inherit;
 }
-.rd-end-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-xl);
+.rd-creator h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 500;
 }
-.rd-end .btn-primary {
-  max-width: min(420px, 100%);
+.rd-creator p {
+  margin: 6px 0 0;
+  font-size: 1.125rem;
+  color: inherit;
+}
+.rd-next-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+.rd-next-card:hover {
+  border-color: var(--ink-3);
+}
+.rd-next-card img,
+.rd-next-thumb {
+  flex: none;
+  width: 92px;
+  height: 72px;
+  object-fit: cover;
+  object-position: center 20%;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.rd-next-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.rd-next-body strong {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+.rd-next-body span {
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rd-caught {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.rd-end-mascot {
+  flex: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgb(176 64 255 / 0.5));
+}
+.rd-end-title {
+  margin: 0 0 4px;
+  font-size: var(--text-lg);
 }
 .rd-end-note,
 .rd-countdown {
   margin: 0;
-  max-width: 40ch;
+  max-width: 46ch;
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+.rd-back-title {
+  justify-self: start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rd-pull {
+  position: relative;
+  margin-top: var(--space-10);
+  border-top: 1px solid var(--line-strong);
+}
+.rd-top-btn {
+  position: absolute;
+  right: 20px;
+  bottom: calc(100% - 1px);
+  translate: 0 50%;
+  display: grid;
+  justify-items: center;
+  width: 58px;
+  height: 58px;
+  padding-top: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: #171717;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+}
+[data-theme="light"] .rd-top-btn {
+  background: var(--bg);
+  color: var(--ink);
+}
+.rd-pull-go {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: var(--space-8) var(--gutter) var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.rd-pull-ico {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 2.5px solid currentColor;
+  border-radius: 50%;
+  color: var(--ink);
+  transform: translateY(calc(var(--pull, 0) * -10px));
+  transition: transform 120ms linear, color var(--dur);
+}
+.rd-pull[data-armed] .rd-pull-ico {
+  color: var(--accent-text);
 }
 .rd-chlist {
   list-style: none;
@@ -1064,3 +1193,9 @@
 .rd-auto[data-state="paused"] .rd-auto-read,
 .rd-auto[data-hold] .rd-auto-read { opacity: 0.8; }
 .rd-auto-row input[type="range"] { width: min(220px, 45vw); accent-color: var(--accent); }
+
+/* cycle 0 merge: the "what's next" card is a green fill, so every line on it uses the fill's ink (black on green). */
+.rd-wn .rd-next-body span,
+.rd-wn .rd-next-body time {
+  color: var(--accent-ink);
+}

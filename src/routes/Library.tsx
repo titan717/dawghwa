@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { History, LayoutGrid, List, Search as SearchIcon, X } from "lucide-react";
+import { ChevronDown, History, LayoutGrid, List, RotateCw, Search as SearchIcon, X } from "lucide-react";
 import { TitleGrid } from "@/components/Grid";
 import { Cover } from "@/components/Cover";
 import { EmptyState, ListSkeleton } from "@/components/States";
-import { Sticker } from "@/components/Editorial";
 import { useHead } from "@/lib/seo";
 import { allCollections, useUser } from "@/lib/store/user";
 import type { LibraryRecord, LibraryStatus, ProgressRecord } from "@/lib/store/db";
@@ -14,9 +13,8 @@ import { STATUS_LABELS } from "./TitlePage";
 type Tab = LibraryStatus | "recent" | "all" | "favorites" | `c:${string}`;
 type Scope = "all" | "unread";
 type View = "grid" | "list";
-const SORTS = { updated: "Recently changed", added: "Date added", title: "Title A-Z", progress: "Most read" } as const;
+const SORTS = { updated: "Recently Updated", added: "Date Added", title: "Title A-Z", progress: "Most Read" } as const;
 const VIEW_KEY = "dawghwa:library-view";
-const STATUS_TONE: Partial<Record<LibraryStatus, "accent" | "lime" | "lavender" | "ink">> = { reading: "accent", completed: "lavender", plan: "ink" };
 
 const readCount = (p?: ProgressRecord) => (p ? Object.keys(p.read).length : 0);
 
@@ -29,30 +27,46 @@ function seriesProgress(t: Title, p?: ProgressRecord): { label: string; fraction
   return { label, fraction: last && p.maxReadNumber ? Math.min(1, p.maxReadNumber / last) : undefined };
 }
 
+/** "today", "yesterday", "3 days ago", or a short date. */
+function lastRead(ts: number) {
+  const days = Math.floor((Date.now() - ts) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** Blueprint "My Series" row: cover flush left, title, chapter, last read, and a two-line action. */
 function LibraryRow({ t, r, p }: { t: Title; r?: LibraryRecord; p?: ProgressRecord }) {
   const prog = seriesProgress(t, p);
   const resume = p?.pageCount ? readerPath(t, p.chapterId, p.page || undefined) : undefined;
+  const fresh = Boolean(p?.maxReadNumber && t.latestChapter && t.latestChapter > p.maxReadNumber);
+  const meta = p ? (prog?.label ?? `Ch. ${p.chapterNumber}`) : [r?.status ? STATUS_LABELS[r.status] : undefined, kindLabel(t.meta?.kind), t.latestChapter ? `${t.latestChapter} chapters` : undefined].filter(Boolean).join(" · ");
   return (
     <li className="lib-row">
       <Link to={titlePath(t)} className="lib-row-main">
-        <Cover mature={isMature(t)} src={t.cover} title={t.title} sizes="56px" className="cover-sm" />
+        <span className="lib-row-cover">
+          {fresh && <span className="new-badge">New Chapter</span>}
+          <Cover mature={isMature(t)} src={t.cover} title={t.title} sizes="96px" className="cover-sm" />
+        </span>
         <span className="lib-row-body">
           <span className="lib-row-title">{t.title}</span>
-          <span className="lib-row-meta">
-            {r?.status && <Sticker tone={STATUS_TONE[r.status] ?? "lime"}>{STATUS_LABELS[r.status]}</Sticker>}
-            {r?.favorite && <span className="lib-fav">Favourite</span>}
-            <span>{[kindLabel(t.meta?.kind), prog?.label].filter(Boolean).join(" · ")}</span>
+          <span className="lib-row-ch">
+            {meta}
+            {r?.favorite && <span className="lib-fav"> · Favourite</span>}
           </span>
-          {prog?.fraction !== undefined && (
-            <span className="progress-bar" aria-label={`Reached chapter ${p!.maxReadNumber} of ${t.latestChapter}`}>
-              <i style={{ width: `${Math.round(prog.fraction * 100)}%` }} />
-            </span>
-          )}
+          {p && <span className="lib-row-when">Last read {lastRead(p.updatedAt)}</span>}
         </span>
       </Link>
-      {resume && (
-        <Link className="btn btn-sm" to={resume} aria-label={`Continue ${t.title}, chapter ${p!.chapterNumber}`}>
+      {resume ? (
+        <Link className="lib-go" to={resume} aria-label={`Continue reading ${t.title}, chapter ${p!.chapterNumber}`}>
           Continue
+          <small>Reading</small>
+        </Link>
+      ) : (
+        <Link className="lib-go" to={titlePath(t)} aria-label={`Open ${t.title}`}>
+          View
+          <small>Series</small>
         </Link>
       )}
     </li>
@@ -70,9 +84,11 @@ export default function Library() {
   const tab = (params.get("tab") as Tab) || "all";
   const [sort, setSort] = useState<keyof typeof SORTS>("updated");
   const [find, setFind] = useState("");
-  const [view, setViewState] = useState<View>(() => (localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid"));
+  // blueprint "My Series" is a list; the cover grid stays one tap away
+  const [view, setViewState] = useState<View>(() => (localStorage.getItem(VIEW_KEY) === "grid" ? "grid" : "list"));
+  const [finding, setFinding] = useState(false);
   const setView = (v: View) => (setViewState(v), localStorage.setItem(VIEW_KEY, v));
-  useHead({ title: "Library", noindex: true });
+  useHead({ title: "My Series", noindex: true });
   const collections = useMemo(() => allCollections(state), [state]);
   const recs = useMemo(() => [...library.values()].filter((r) => r.status || r.favorite || r.collections.length), [library]);
   const scope: Scope = params.get("only") === "unread" ? "unread" : "all";
@@ -103,6 +119,12 @@ export default function Library() {
     if (tab !== "recent") xs.sort((a, b) => (sort === "title" ? a.t.title.localeCompare(b.t.title) : sort === "added" ? (b.r?.addedAt ?? 0) - (a.r?.addedAt ?? 0) : sort === "progress" ? readCount(b.p) - readCount(a.p) : (b.r?.updatedAt ?? 0) - (a.r?.updatedAt ?? 0)));
     return xs;
   }, [recs, recent, tab, sort, titles, progress, find, scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  // totals for the blueprint's "N SERIES TOTAL | N UNREAD SERIES" switch, for the current list
+  const totals = useMemo(() => {
+    const list = tab === "recent" ? recent : recs.filter(match).map((r) => ({ t: titles.get(r.titleKey), p: progress.get(r.titleKey) }));
+    const known = list.filter((x): x is { t: Title; p: ProgressRecord | undefined } => Boolean(x.t));
+    return { all: known.length, unread: known.filter((x) => unread(x.t, x.p)).length };
+  }, [tab, recent, recs, titles, progress]); // eslint-disable-line react-hooks/exhaustive-deps
   const count = (f: (r: LibraryRecord) => boolean) => recs.filter(f).length;
   const tabs: [Tab, string, number][] = [
     ["recent", "Recent", recent.length],
@@ -116,37 +138,45 @@ export default function Library() {
   return (
     <div className="page library-page">
       <header className="lib-head">
-        <div>
-          <h1>Library</h1>
-          <p className="muted">Saved on this device for {state.profile?.name ?? "this profile"}.</p>
-        </div>
+        <h1>My Series</h1>
         <div className="lib-head-actions">
+          <button className="icon-btn" aria-label="Find in my series" aria-expanded={finding} onClick={() => (setFinding((v) => !v), finding && setFind(""))}>
+            <SearchIcon size={22} />
+          </button>
           <Link className="icon-btn" to="/history" aria-label="Reading history" title="Reading history">
-            <History size={20} />
+            <History size={22} />
           </Link>
-          <div className="segmented lib-view" role="radiogroup" aria-label="View">
-            <button role="radio" aria-checked={view === "grid"} aria-label="Grid" onClick={() => setView("grid")}>
-              <LayoutGrid size={16} />
-            </button>
-            <button role="radio" aria-checked={view === "list"} aria-label="List" onClick={() => setView("list")}>
-              <List size={16} />
-            </button>
-          </div>
+          <button className="icon-btn" aria-label={view === "list" ? "Show as cover grid" : "Show as list"} onClick={() => setView(view === "list" ? "grid" : "list")}>
+            {view === "list" ? <LayoutGrid size={21} /> : <List size={22} />}
+          </button>
         </div>
       </header>
-      <div className="tabs lib-tabs" role="tablist" aria-label="Library lists">
+      <div className="tabs lib-tabs" role="tablist" aria-label="My series lists">
         {tabs.map(([id, label, n]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setParams(id === "all" ? {} : { tab: id }, { replace: true })}>
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setParams(id === "all" ? {} : { tab: id }, { replace: true })} aria-label={`${label}, ${n}`}>
             {label}
-            {n > 0 && <span className="count">{n}</span>}
           </button>
         ))}
       </div>
+      {finding && (
+        <div className="lib-tools">
+          <label className="lib-find">
+            <SearchIcon size={16} aria-hidden="true" />
+            <input type="search" autoFocus placeholder="Find in my series" aria-label="Find in my series" value={find} onChange={(e) => setFind(e.target.value)} />
+            {find && (
+              <button className="icon-btn" aria-label="Clear" onClick={() => setFind("")}>
+                <X size={16} />
+              </button>
+            )}
+          </label>
+        </div>
+      )}
       <div className="lib-scope" role="radiogroup" aria-label="Show">
+        <RotateCw size={16} className="lib-scope-ico" aria-hidden="true" />
         {(
           [
-            ["all", "All series"],
-            ["unread", "With unread chapters"],
+            ["all", `${totals.all} series total`],
+            ["unread", `${totals.unread} unread series`],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -164,24 +194,20 @@ export default function Library() {
           </button>
         ))}
       </div>
-      {tab !== "recent" && recs.length > 4 && (
-        <div className="lib-tools">
-          <label className="lib-find">
-            <SearchIcon size={16} aria-hidden="true" />
-            <input type="search" placeholder="Find in library" aria-label="Find in library" value={find} onChange={(e) => setFind(e.target.value)} />
-            {find && (
-              <button className="icon-btn" aria-label="Clear" onClick={() => setFind("")}>
-                <X size={16} />
-              </button>
-            )}
+      {tab !== "recent" && rows.length > 0 && (
+        <div className="lib-sortbar">
+          <span>{rows.length === 1 ? "1 series" : `${rows.length} series`}</span>
+          <label className="lib-sort">
+            <span className="sr-only">Sort</span>
+            <select aria-label="Sort my series" value={sort} onChange={(e) => setSort(e.target.value as keyof typeof SORTS)}>
+              {Object.entries(SORTS).map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} aria-hidden="true" />
           </label>
-          <select className="select select-sm" aria-label="Sort library" value={sort} onChange={(e) => setSort(e.target.value as keyof typeof SORTS)}>
-            {Object.entries(SORTS).map(([k, l]) => (
-              <option key={k} value={k}>
-                {l}
-              </option>
-            ))}
-          </select>
         </div>
       )}
       {!ready ? (

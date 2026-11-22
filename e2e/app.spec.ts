@@ -16,9 +16,9 @@ test("primary navigation reaches every section and back works", async ({ page, i
   const nav = page.locator(isMobile ? "nav.bottomnav" : ".sidebar nav");
   // History lives in the desktop sidebar; on mobile it is reached from Profile.
   const sections = [
-    ["Library", /\/library$/, "Library"],
+    ["My Series", /\/library$/, "My Series"],
     ...(isMobile ? [] : ([["History", /\/history$/, "History"]] as const)),
-    ["Achievements", /\/achievements$/, "Achievements"],
+    ["Discover", /\/discover/, null],
     ["Profile", /\/profile$/, null],
   ] as const;
   for (const [name, url, heading] of sections) {
@@ -27,7 +27,7 @@ test("primary navigation reaches every section and back works", async ({ page, i
     if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
   }
   await page.goBack();
-  await expect(page).toHaveURL(/\/achievements$/);
+  await expect(page).toHaveURL(/\/discover/);
 });
 
 test("no shell top bar; Discover is reached from Search", async ({ page }) => {
@@ -59,7 +59,7 @@ test("Rewards toggle hides achievements and gives the nav slot back to Discover"
 test("empty library and history show honest empty states", async ({ page }) => {
   await skipOnboarding(page);
   await page.goto("/library");
-  await expect(page.getByText("Your library is empty")).toBeVisible();
+  await expect(page.getByText(/Your library is empty|No recently read series/)).toBeVisible();
   await page.goto("/history");
   await expect(page.getByRole("heading", { level: 1, name: "History" })).toBeVisible();
 });
@@ -100,7 +100,7 @@ test("favourite persists across reloads", async ({ page }) => {
 test("offline: navigation keeps working and failures say offline, not 'updated'", async ({ page, context }) => {
   await skipOnboarding(page);
   await page.goto("/library");
-  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My Series" })).toBeVisible();
   await context.setOffline(true);
   // Service workers are blocked in tests, so an unvisited screen's code cannot load offline.
   await page.locator("a[href='/history']:visible").first().click();

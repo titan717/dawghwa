@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Ban, Bot, Check, Lock, Upload, UserPlus, Brain, Briefcase, Droplet, Flower2, HeartHandshake, Users, CloudRain, Crown, DoorOpen, Drama, Fingerprint, Flame, Ghost, GraduationCap, Heart, Hourglass, Landmark, RefreshCcw, Rocket, Shield, Siren, Skull, Smile, Sparkles, Sun, Swords, Trophy,
+  BookOpen, LayoutGrid, ScrollText, Smartphone,
+  Ban, Check, Lock, Upload, UserPlus,
 } from "lucide-react";
 import { Mascot, MascotSays } from "@/components/Mascot";
 import { ProgressRing } from "@/components/ProgressRing";
@@ -11,21 +12,23 @@ import { useProgression } from "@/lib/rewards";
 import { useSettings } from "@/lib/settings";
 import { isValidPin, setPin, signOut, unlock, useSignInRequired } from "@/lib/store/accounts";
 import { importProfile } from "@/lib/store/transfer";
-import { useVocabulary } from "@/lib/query";
+import { useBrowse, useVocabulary } from "@/lib/query";
+import { coverSrc } from "@/lib/api/images";
+import { isMature } from "@/lib/titles";
 import { deleteProfile, getUser, PROFILE_COLORS, updateProfile, useUser } from "@/lib/store/user";
 import { useHead } from "@/lib/seo";
 
-const FORMATS: [string, string, string][] = [
-  ["manhwa", "Manhwa", "Korean, usually full-colour vertical scroll"],
-  ["manga", "Manga", "Japanese, read right to left"],
-  ["manhua", "Manhua", "Chinese, often cultivation and fantasy"],
+type Icon = ComponentType<{ size?: number; "aria-hidden"?: boolean; strokeWidth?: number }>;
+
+const FORMATS: [string, string, string, Icon][] = [
+  ["manga", "Manga", "Japanese, read right to left", BookOpen],
+  ["manhwa", "Manhwa", "Korean, full-colour vertical scroll", Smartphone],
+  ["manhua", "Manhua", "Chinese, often cultivation and fantasy", ScrollText],
 ];
+// blueprint v2 genre tiles are tinted per genre when no cover art is available
+const TINTS = ["#d4242f", "#c79a1e", "#d9822b", "#6a3cf0", "#2347e8", "#b0183a", "#0f8fb0", "#8a2be2", "#c2185b", "#1e9e6a"];
 // a curated first screen; the full vocabulary from the API fills in the rest
 const STARTER = ["Action", "Fantasy", "Romance", "Comedy", "Drama", "Isekai", "Thriller", "Horror", "Slice of Life", "Psychological", "Mystery", "Sci-Fi", "Sports", "Historical", "Martial Arts", "Reincarnation", "Time Travel", "Villainess", "Monsters", "Survival", "Office Workers", "School Life", "Tragedy", "Mecha"];
-const ICONS: Record<string, ComponentType<{ size?: number; "aria-hidden"?: boolean }>> = {
-  Action: Swords, Fantasy: Sparkles, Romance: Heart, Comedy: Smile, Drama, Isekai: DoorOpen, Thriller: Siren, Horror: Ghost, "Slice of Life": Sun, Psychological: Brain, Mystery: Fingerprint, "Sci-Fi": Rocket, Sports: Trophy, Historical: Landmark, "Martial Arts": Shield, Reincarnation: RefreshCcw, "Time Travel": Hourglass, Villainess: Crown, Monsters: Skull, Survival: Flame, "Office Workers": Briefcase, "School Life": GraduationCap, Tragedy: CloudRain, Mecha: Bot,
-  Gore: Droplet, "Sexual Violence": Ban, "Boys' Love": HeartHandshake, "Girls' Love": Flower2, Harem: Users,
-};
 const AVOID = ["Gore", "Sexual Violence", "Boys' Love", "Girls' Love", "Harem", "Tragedy"];
 
 type Step = "hello" | "reader" | "genres" | "formats" | "avoid" | "ready";
@@ -66,6 +69,20 @@ function OnboardingFlow() {
   const known = useMemo(() => new Set((vocab.data?.tags ?? []).map((t) => t.name)), [vocab.data]);
   const starter = vocab.data ? STARTER.filter((g) => known.has(g)) : STARTER;
   const avoidList = vocab.data ? AVOID.filter((g) => known.has(g)) : AVOID;
+  // genre tile art: the most-followed title carrying each genre (one shared, cached catalogue request)
+  const pool = useBrowse({ order: "popular", limit: 100 });
+  const art = useMemo(() => {
+    const out = new Map<string, string>();
+    const used = new Set<string>();
+    for (const g of starter) {
+      const t = (pool.data?.items ?? []).find((x) => x.cover && !isMature(x) && !used.has(x.key) && (x.meta?.genres ?? x.meta?.tags ?? []).includes(g));
+      if (t?.cover) {
+        out.set(g, coverSrc(t.cover));
+        used.add(t.key);
+      }
+    }
+    return out;
+  }, [pool.data, starter]);
   const toggle = (xs: string[], set: (v: string[]) => void, v: string) => set(xs.includes(v) ? xs.filter((x) => x !== v) : [...xs, v]);
   const current = order[step]!;
   const others = profiles.filter((p) => p.id !== profile?.id);
@@ -192,30 +209,25 @@ function OnboardingFlow() {
             <p className="onboard-count-line" aria-live="polite">
               {genres.length ? `${genres.length} selected` : "Select at least one"}
             </p>
-            <div className="onboard-tiles">
-              {starter.map((g) => (
-                <GenreTile key={g} label={g} on={genres.includes(g)} onClick={() => toggle(genres, setGenres, g)} />
+            <div className="ob-tiles">
+              {starter.map((g, i) => (
+                <GenreTile key={g} label={g} img={art.get(g)} tint={TINTS[i % TINTS.length]!} eager={i < 8} on={genres.includes(g)} onClick={() => toggle(genres, setGenres, g)} />
               ))}
             </div>
           </>
         )}
         {current === "formats" && (
-          <div className="stack">
-            {FORMATS.map(([k, l, d]) => (
-              <button key={k} className="menu-item onboard-option" aria-pressed={kinds.includes(k)} onClick={() => toggle(kinds, setKinds, k)}>
-                <span>
-                  <strong>{l}</strong>
-                  <span className="hint">{d}</span>
-                </span>
-                {kinds.includes(k) && <Check size={18} aria-hidden="true" />}
-              </button>
+          <div className="ob-options">
+            {FORMATS.map(([k, l, d, I]) => (
+              <Option key={k} icon={I} title={l} hint={d} on={kinds.includes(k)} onClick={() => toggle(kinds, setKinds, k)} />
             ))}
+            <Option icon={LayoutGrid} title="All of them" hint="Leave it open" on={kinds.length === 0} onClick={() => setKinds([])} />
           </div>
         )}
         {current === "avoid" && (
-          <div className="onboard-chips">
+          <div className="ob-options ob-options-2">
             {avoidList.map((g) => (
-              <OnboardChip key={g} label={g} neg on={avoid.includes(g)} onClick={() => toggle(avoid, setAvoid, g)} />
+              <Option key={g} icon={Ban} title={g} on={avoid.includes(g)} onClick={() => toggle(avoid, setAvoid, g)} />
             ))}
           </div>
         )}
@@ -285,27 +297,28 @@ function Ready({ name, rewards, onDone }: { name: string; rewards: boolean; onDo
   );
 }
 
-function GenreTile({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
-  const Icon = ICONS[label];
+function GenreTile({ label, img, tint, eager, on, onClick }: { label: string; img?: string; tint: string; eager: boolean; on: boolean; onClick: () => void }) {
   return (
-    <button className="onboard-tile" aria-pressed={on} onClick={onClick}>
-      <span className="onboard-tile-art" aria-hidden="true">
-        {Icon && <Icon size={26} aria-hidden />}
-      </span>
-      <span className="onboard-tile-name">{label}</span>
-      <span className="onboard-tile-check" aria-hidden="true">
-        <Check size={14} />
-      </span>
+    <button className="ob-tile" aria-pressed={on} onClick={onClick} style={{ "--tint": tint } as CSSProperties}>
+      {img && <img src={img} alt="" loading={eager ? "eager" : "lazy"} decoding="async" referrerPolicy="no-referrer" />}
+      <span className="ob-tile-label">{label}</span>
+      {on && (
+        <span className="ob-check" aria-hidden="true">
+          <Check size={14} strokeWidth={3} />
+        </span>
+      )}
     </button>
   );
 }
 
-function OnboardChip({ label, on, neg, onClick }: { label: string; on: boolean; neg?: boolean; onClick: () => void }) {
-  const Icon = ICONS[label];
+function Option({ icon: I, title, hint, on, onClick }: { icon: Icon; title: string; hint?: string; on: boolean; onClick: () => void }) {
   return (
-    <button className={`onboard-chip${neg ? " is-neg" : ""}`} aria-pressed={on} onClick={onClick}>
-      {Icon && <Icon size={16} aria-hidden />}
-      {label}
+    <button className="ob-option" aria-pressed={on} onClick={onClick}>
+      <I size={24} strokeWidth={1.8} aria-hidden />
+      <span>
+        <strong>{title}</strong>
+        {hint && <small>{hint}</small>}
+      </span>
     </button>
   );
 }

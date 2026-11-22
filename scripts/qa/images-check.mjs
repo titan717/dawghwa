@@ -8,7 +8,7 @@ const page = await ctx.newPage();
 const bad = [];
 page.on("response", (r) => { if (r.request().resourceType() === "image" && r.status() >= 400) bad.push(`${r.status()} ${new URL(r.url()).host}`); });
 await page.goto(base + "/welcome");
-await page.getByRole("button", { name: "Skip" }).click();
+await page.getByRole("button", { name: "Cancel" }).click();
 for (const p of paths) {
   await page.goto(base + p);
   await page.waitForTimeout(7000);

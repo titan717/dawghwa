@@ -5,7 +5,7 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ serviceWorkers: "block", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 await ctx.route((u) => !u.hostname.includes("localhost") && !u.hostname.includes("fonts"), async (route) => { try { const r = await fetch(route.request().url()); await route.fulfill({ status: r.status, contentType: r.headers.get("content-type") ?? "image/jpeg", body: Buffer.from(await r.arrayBuffer()) }); } catch { await route.abort(); } });
 const p = await ctx.newPage();
-await p.goto(base + "/welcome"); await p.getByRole("button", { name: "Skip" }).click(); await p.waitForTimeout(400);
+await p.goto(base + "/welcome"); await p.getByRole("button", { name: "Cancel" }).click(); await p.waitForTimeout(400);
 await p.goto(base + R); await p.waitForTimeout(6000); await p.screenshot({path:"/tmp/c2.png"}); console.log("pages", await p.locator(".rd-page").count(), await p.evaluate(()=>document.body.scrollHeight));
 const st = () => p.evaluate(() => { const els = [...document.querySelectorAll(".rd-page")]; const el = els.find((e) => e.getBoundingClientRect().bottom > 0); const r = el.getBoundingClientRect(); return { y: scrollY, idx: el.dataset.index, into: Math.round(-r.top) }; });
 const res = [];

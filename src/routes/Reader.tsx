@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Bookmark as BookmarkIcon, BookmarkCheck, Check, ChevronLeft, ChevronRight, ListOrdered, Maximize2, MessageCircle, Minimize2, Minus, Pause, Play, Plus, RotateCw, Settings2, ThumbsDown, ThumbsUp, X, ZoomOut } from "lucide-react";
+import { ArrowDown, ArrowLeft, Bookmark as BookmarkIcon, BookmarkCheck, Check, ChevronLeft, ChevronRight, ChevronUp, ListOrdered, Maximize2, MessageCircle, Minimize2, Minus, Pause, Play, Plus, RotateCw, Settings2, ThumbsDown, ThumbsUp, X, ZoomOut } from "lucide-react";
 import { Mascot } from "@/components/Mascot";
 import { ChapterNo } from "@/components/Editorial";
 import { Sheet } from "@/components/Layer";
@@ -672,6 +672,41 @@ function ReaderView() {
   }, [countdown, goChapter, next]);
 
   const sourceName = src?.name ?? selectedVariant?.source ?? title?.sourceName ?? activeSource;
+
+  // Blueprint v2 "Pull to read next": at the very bottom of a chapter, dragging up past
+  // the end by ~90px opens the next chapter. The visible button does the same for taps, mice and keyboards.
+  const [pull, setPull] = useState(0);
+  useEffect(() => {
+    if (!next) return;
+    let startY: number | null = null;
+    let amount = 0;
+    const atBottom = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+    const onStart = (e: TouchEvent) => {
+      startY = atBottom() ? e.touches[0]!.clientY : null;
+      amount = 0;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (startY === null) return;
+      amount = Math.max(0, (startY - e.touches[0]!.clientY) / 90);
+      setPull(amount);
+    };
+    const onEnd = () => {
+      if (startY !== null && amount >= 1) goChapter(next);
+      startY = null;
+      amount = 0;
+      setPull(0);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [next, goChapter]);
   const backTo = title ? titlePath(title) : "/";
 
   // ------------------------------------------------------------ states
@@ -698,6 +733,7 @@ function ReaderView() {
     void rate(title, nextR);
     if (nextR) void haptic("success");
   };
+  const creators = [...new Set([...(title?.meta?.authors ?? []), ...(title?.meta?.artists ?? [])])];
   // "what's next" card (D64): next chapter first, then the way back and a quick rating
   const endPanel = (
     <section className="rd-end rd-wn" aria-label="End of chapter" data-in={reachedEnd || undefined}>
@@ -707,6 +743,12 @@ function ReaderView() {
         </p>
         {beat && settings.rewards ? <RewardBeat m={beat} /> : !next && <Mascot variant="head" size={64} className="rd-end-mascot" />}
       </div>
+      {creators.length > 0 && (
+        <div className="rd-creator">
+          <h2>Creator</h2>
+          <p>{creators.join(", ")}</p>
+        </div>
+      )}
 
       {next ? (
         <div className="rd-next">
@@ -786,6 +828,20 @@ function ReaderView() {
           </button>
         </div>
       )}
+      <div className="rd-pull" data-armed={pull >= 1 || undefined}>
+        <button className="rd-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" })} aria-label="Back to top of chapter">
+          <ChevronUp size={18} aria-hidden="true" />
+          TOP
+        </button>
+        {next && (
+          <button className="rd-pull-go" onClick={() => goChapter(next)} style={{ "--pull": Math.min(1, pull) } as React.CSSProperties}>
+            <span className="rd-pull-ico" aria-hidden="true">
+              <ArrowDown size={30} strokeWidth={1.8} />
+            </span>
+            <span>{pull >= 1 ? "Release to read next chapter" : "Pull to read next chapter"}</span>
+          </button>
+        )}
+      </div>
     </section>
   );
 

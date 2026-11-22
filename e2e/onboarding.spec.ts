@@ -17,7 +17,7 @@ test("mascot onboarding creates a reader with a PIN and ends on the first quest"
 
   await expect(page.getByText("Select at least one")).toBeVisible();
   await expect(cont).toBeDisabled();
-  await page.locator(".onboard-tile").first().click();
+  await page.locator(".ob-tile").first().click();
   await expect(page.getByText("1 selected")).toBeVisible();
   await cont.click(); // formats
   await cont.click(); // avoid
@@ -47,7 +47,7 @@ test("edit mode keeps only the taste steps and Cancel returns to Profile", async
   await page.getByRole("button", { name: "Skip" }).click();
   await page.goto("/welcome?edit=1");
   await expect(page.getByRole("button", { name: "Create reader" })).toHaveCount(0);
-  await expect(page.locator(".onboard-tiles")).toBeVisible();
+  await expect(page.locator(".ob-tiles")).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).first().click();
   await expect(page).toHaveURL(/\/profile$/);
 });

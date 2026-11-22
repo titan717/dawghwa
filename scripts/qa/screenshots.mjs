@@ -14,13 +14,13 @@ for (const vp of VPS) {
   page.on("console", (m) => m.type() === "error" && errs.push("console " + m.text()));
   // onboard quickly: skip
   await page.goto(base + "/welcome");
-  await page.getByRole("button", { name: "Skip" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
   await page.waitForTimeout(500);
   for (const p of paths) {
     await page.goto(base + p);
     await page.waitForTimeout(Number(process.env.WAIT||5000));
     const f = `${process.env.OUT || "/tmp/shots"}/${vp.name}-${p.replace(/[^\w]+/g, "_") || "home"}.png`;
-    await page.screenshot({ path: f, fullPage: false });
+    await page.screenshot({ path: f, fullPage: !!process.env.FULL });
     console.log(f);
   }
   console.log(vp.name, errs.slice(0, 10).join("\n"));

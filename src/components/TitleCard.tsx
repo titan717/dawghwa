@@ -2,11 +2,10 @@ import { memo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreHorizontal, Star } from "lucide-react";
 import { prefetchTitle } from "@/lib/query";
-import { compactNumber, kindLabel, titlePath, type Title, isMature } from "@/lib/titles";
+import { kindLabel, titlePath, type Title, isMature } from "@/lib/titles";
 import { Cover } from "./Cover";
-import { ProgressRing, useSeriesFraction } from "./ProgressRing";
-import { useUser } from "@/lib/store/user";
 import { TitleActionsSheet } from "./TitleActions";
+import { useUser } from "@/lib/store/user";
 
 export interface CardProps {
   title: Title;
@@ -16,6 +15,10 @@ export interface CardProps {
   eager?: boolean;
   progress?: { label: string; fraction: number };
   variant?: "card" | "ranked";
+  /** Blueprint green sublabel under the cover (reason, rank or genre). */
+  sub?: string;
+  /** Blueprint green corner badge, only when real data backs it (e.g. unread chapters). */
+  badge?: string;
   /** Search query: matched words in the title are wrapped in <mark>. */
   highlight?: string;
 }
@@ -70,34 +73,19 @@ function useLongPress(onLong: () => void) {
   };
 }
 
-/** "Up" badge window: the provider says the series changed in the last 3 days. Only shown when the timestamp is known. */
-const FRESH_MS = 3 * 24 * 3600 * 1000;
-function isFresh(updatedAt?: number): boolean {
-  if (!updatedAt) return false;
-  const ms = updatedAt < 1e12 ? updatedAt * 1000 : updatedAt; // providers send seconds or milliseconds
-  const age = Date.now() - ms;
-  return age >= 0 && age < FRESH_MS;
-}
-
-/**
- * Reading state for a cover, independent of Rewards: how far through the series
- * (highest chapter finished over the latest known chapter) and how many newer
- * chapters exist. Both need both numbers; nothing is guessed.
- */
-function useReadingState(titleKey: string, latest?: number): { reading?: number; unread: number } {
-  const max = useUser((s) => s.progress.get(titleKey)?.maxReadNumber ?? 0);
-  if (!latest || latest <= 0 || max <= 0) return { unread: 0 };
-  return { reading: Math.min(1, max / latest), unread: Math.max(0, Math.floor(latest) - Math.floor(max)) };
-}
-
-export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card", highlight }: CardProps) {
+export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card", sub, badge, highlight }: CardProps) {
   const [menu, setMenu] = useState(false);
+  // 2 = every known chapter read, 1 = started and newer chapters exist (real local progress only)
+  const readState = useUser((s) => {
+    const p = s.progress.get(t.key);
+    if (!p || !t.latestChapter || !p.maxReadNumber) return 0;
+    return p.maxReadNumber >= t.latestChapter ? 2 : 1;
+  });
+  const cornerBadge = badge ?? (readState === 1 ? "New Chapter" : undefined);
+  const line = readState === 2 ? "✓ All read" : (sub ?? reason);
   const press = useLongPress(() => setMenu(true));
   const meta = [kindLabel(t.meta?.kind), t.latestChapter ? `Ch. ${t.latestChapter}` : undefined].filter(Boolean);
   const href = titlePath(t);
-  const series = useSeriesFraction(t.key, t.latestChapter);
-  const { reading, unread } = useReadingState(t.key, t.latestChapter);
-  const fresh = isFresh(t.updatedAt);
   if (variant === "ranked")
     return (
       <div className="card">
@@ -129,31 +117,8 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
         <MoreHorizontal size={18} />
       </button>
       <Link to={href} className="card-link" onMouseEnter={() => prefetchTitle(t)} onFocus={() => prefetchTitle(t)} {...press}>
-        <span className="card-cover">
-          <Cover mature={isMature(t)} src={t.cover} large={t.coverLarge} title={t.title} eager={eager} />
-          {fresh ? (
-            <span className="card-badge sticker sticker-accent">
-              Up<span className="sr-only">, updated in the last 3 days</span>
-            </span>
-          ) : t.meta?.status === "completed" ? (
-            <span className="card-badge sticker sticker-lavender">Done</span>
-          ) : null}
-          {unread > 0 && (
-            <span className="card-unread tabular">
-              {unread > 99 ? "99+" : unread} new<span className="sr-only"> {unread === 1 ? "chapter" : "chapters"} since you last read</span>
-            </span>
-          )}
-          {series !== undefined && (
-            <span className="card-ring">
-              <ProgressRing value={series} size={30} stroke={3} label={`${Math.round(series * 100)}% of the series read`} />
-            </span>
-          )}
-          {reading !== undefined && !progress && (
-            <span className="card-progress" aria-hidden="true">
-              <i style={{ transform: `scaleX(${reading})` }} />
-            </span>
-          )}
-        </span>
+        {cornerBadge && <span className="card-badge new-badge">{cornerBadge}</span>}
+        <Cover mature={isMature(t)} src={t.cover} large={t.coverLarge} title={t.title} eager={eager} />
         {progress && (
           <div className="progress-bar" aria-label={progress.label}>
             <i style={{ width: `${Math.round(progress.fraction * 100)}%` }} />
@@ -161,14 +126,9 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
         )}
         <span className="card-title"><Highlight text={t.title} query={highlight} /></span>
       </Link>
-      {reason ? (
-        <span className="card-reason">{reason}</span>
-      ) : (
-        <span className="card-meta">
-          {meta.map((m) => (
-            <span key={m}>{m}</span>
-          ))}
-          {t.follows && !meta.length ? <span>{compactNumber(t.follows)} followers</span> : null}
+      {line && (
+        <span className="card-reason" data-done={readState === 2 || undefined}>
+          {line}
         </span>
       )}
       <TitleActionsSheet title={t} open={menu} onClose={() => setMenu(false)} context={context} />
