@@ -64,7 +64,7 @@ export function Shell() {
   if (landing) return <Suspense fallback={null}><Landing /></Suspense>;
 
   return (
-    <div className="shell" data-own-chrome={immersive || undefined} style={{ display: "block" }}>
+    <div className="shell" data-own-chrome={immersive || undefined}>
       <a className="skip-link" href="#main">Skip to content</a>
       <div className="main">
         {!online ? (
@@ -91,7 +91,7 @@ export function Shell() {
           </footer>
         )}
       </div>
-      <nav className="bottomnav" aria-label="Primary" style={{ display: "grid" }}>
+      <nav className="bottomnav" aria-label="Primary">
         {NAV.map(({ to, label, icon: Icon, end, aria }) => (
           <NavLink key={to} to={to} end={end} aria-label={aria ? `${label}: ${aria}` : undefined}>
             <span className="nav-ico"><Icon size={21} strokeWidth={2} /></span>

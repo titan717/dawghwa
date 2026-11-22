@@ -8,20 +8,18 @@ test("first run shows onboarding once, then home", async ({ page }) => {
   await page.reload();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("main h1").first()).toBeAttached();
-  await expect(page.locator("nav.bottomnav, .sidebar nav").first()).toBeAttached();
+  await expect(page.locator("nav.bottomnav")).toBeAttached();
 });
 
-test("primary navigation reaches every section and back works", async ({ page, isMobile }) => {
+test("primary navigation reaches every section and back works", async ({ page }) => {
   await skipOnboarding(page);
-  const nav = page.locator(isMobile ? "nav.bottomnav" : ".sidebar nav");
-  // History lives in the desktop sidebar; on mobile it is reached from Profile.
-  const sections = [
+  // The bottom navigation is the only global navigation at every width.
+  const nav = page.locator("nav.bottomnav");
+  for (const [name, url, heading] of [
     ["Library", /\/library$/, "Library"],
-    ...(isMobile ? [] : ([["History", /\/history$/, "History"]] as const)),
     ["Achievements", /\/achievements$/, "Achievements"],
     ["Profile", /\/profile$/, null],
-  ] as const;
-  for (const [name, url, heading] of sections) {
+  ] as const) {
     await nav.getByRole("link", { name }).click();
     await expect(page).toHaveURL(url);
     if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
@@ -38,7 +36,7 @@ test("no shell top bar; Discover is reached from Search", async ({ page }) => {
   await expect(page).toHaveURL(/\/discover/);
 });
 
-test("Rewards toggle hides achievements and gives the nav slot back to Discover", async ({ page, isMobile }) => {
+test("Rewards toggle hides achievements and gives the nav slot back to Discover", async ({ page }) => {
   await skipOnboarding(page);
   await expect(page.getByRole("heading", { name: "This week's quests" })).toBeVisible();
   await page.goto("/achievements");
@@ -47,7 +45,7 @@ test("Rewards toggle hides achievements and gives the nav slot back to Discover"
   const toggle = page.getByRole("checkbox", { name: /Show rewards/ });
   await expect(toggle).toBeChecked();
   await toggle.uncheck();
-  const nav = page.locator(isMobile ? "nav.bottomnav" : ".sidebar nav");
+  const nav = page.locator("nav.bottomnav");
   await expect(nav.getByRole("link", { name: "Achievements" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Discover" })).toBeVisible();
   await page.goto("/");

@@ -7,7 +7,7 @@ test.beforeEach(async ({ context }) => maybeRelay(context));
 test("first visit shows the landing; Use in browser enters onboarding; the next visit skips it", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Dawghwa" })).toBeVisible();
-  await expect(page.locator(".sidebar, .bottomnav")).toHaveCount(0); // no app chrome on the landing
+  await expect(page.locator(".bottomnav")).toHaveCount(0); // no app chrome on the landing
   await expect(page).toHaveTitle(/Free manhwa and manga reader in your browser/);
   await page.getByRole("button", { name: "Use in browser" }).click();
   await expect(page).toHaveURL(/\/welcome/);

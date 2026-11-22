@@ -46,7 +46,6 @@
   --panel-offset: 4px;
 
   --gutter: clamp(16px, 4vw, 32px);
-  --sidebar-w: 232px;
   /* The shell has no top bar (docs/DECISIONS.md D6). Kept as a token so sticky offsets stay in one place. */
   --topbar-h: 0px;
   --bottomnav-h: 62px;
