@@ -21,7 +21,7 @@ import { setIncognito, useIncognito } from "@/lib/store/incognito";
 import { IncognitoNotice, INCOGNITO_COPY } from "@/components/IncognitoNotice";
 import { downloadJson, exportProfile, importProfile } from "@/lib/store/transfer";
 import { resetIntel, useIntel } from "@/lib/intel/runtime";
-import { evidence } from "@/lib/intel/learner";
+import { TasteSignal } from "@/components/TasteSignal";
 import { featureLabel } from "@/lib/intel/features";
 import { titlePath } from "@/lib/titles";
 import { isNative, platformName } from "@/lib/platform";
@@ -39,7 +39,6 @@ function TasteDna() {
       .slice(0, 8);
   }, [s]);
   const max = rows[0]?.[1].score ?? 1;
-  const e = s ? evidence(s) : 0;
   return (
     <section className="settings-group" aria-labelledby="dna-h">
       <h2 id="dna-h">Taste profile</h2>
@@ -63,9 +62,7 @@ function TasteDna() {
       ) : (
         <p className="muted">Not enough reading yet. Read a few chapters or save some titles and this fills in.</p>
       )}
-      <p className="muted" style={{ fontSize: "var(--text-xs)", marginTop: 12 }}>
-        Confidence {Math.round(e * 100)}% · {s?.eventCount ?? 0} interactions
-      </p>
+      <TasteSignal />
     </section>
   );
 }

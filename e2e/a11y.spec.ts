@@ -14,6 +14,8 @@ async function audit(page: Page, label: string) {
 
 for (const theme of ["dark", "light"] as const) {
   test(`axe: core routes have no serious violations (${theme})`, async ({ page }) => {
+    // Six routes x axe on a 2-CPU runner sits near the 45s default; the budget is per test, not per route.
+    test.setTimeout(150_000);
     await page.addInitScript((t) => localStorage.setItem("dawghwa:settings", JSON.stringify({ theme: t })), theme);
     await page.goto("/welcome");
     await audit(page, "welcome");

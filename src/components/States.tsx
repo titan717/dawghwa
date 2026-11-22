@@ -162,14 +162,16 @@ export function EmptyState({ title, children, action, pose = "empty", center }: 
 export function errorText(e: unknown): { title: string; body: string; offline: boolean } {
   if (isApiError(e)) {
     if (e.kind === "offline") return { title: "You're offline", body: "Reconnect to load this. Your library and history are still here.", offline: true };
-    if (e.unsupported) return { title: "Not available from this source", body: e.userMessage, offline: false };
+    if (e.unsupported) return { title: "Not available", body: e.userMessage, offline: false };
     return { title: "Couldn't load this", body: e.userMessage, offline: false };
   }
-  return { title: "Something went wrong", body: e instanceof Error ? e.message : "Please try again.", offline: false };
+  return { title: "Something went wrong", body: "Please try again.", offline: false };
 }
 
-export function ErrorState({ error, retry, center, compact }: { error: unknown; retry?: () => void; center?: boolean; compact?: boolean }) {
-  const t = errorText(error);
+export function ErrorState({ error, retry, center, compact, title }: { error: unknown; retry?: () => void; center?: boolean; compact?: boolean; title?: string }) {
+  const base = errorText(error);
+  // A screen-specific heading (e.g. "Chapter unavailable") replaces the generic one, except offline.
+  const t = title && !base.offline ? { ...base, title } : base;
   if (compact)
     return (
       <div className="inline-state" role="alert">

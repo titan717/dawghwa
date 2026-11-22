@@ -142,12 +142,13 @@ describe("localStorage", () => {
 
   it("drops activity writes while on, keeps device preferences, and restores writes once off", () => {
     setIncognito(true);
-    setLocal("dawghwa:recent-search:p", JSON.stringify(["solo"]));
+    setLocal("dawghwa:recent-searches:p", JSON.stringify(["solo"]));
     setLocal("dawghwa.pos.ch-1", "{}");
     setLocal("dawghwa.bookmarks.v1", "{}");
-    expect(localStorage.getItem("dawghwa:recent-search:p")).toBeNull();
+    expect(localStorage.getItem("dawghwa:recent-searches:p")).toBeNull();
     expect(localStorage.getItem("dawghwa.pos.ch-1")).toBeNull();
-    expect(localStorage.getItem("dawghwa.bookmarks.v1")).toBeNull();
+    // a bookmark is a deliberate edit, like a library change, so it still saves
+    expect(localStorage.getItem("dawghwa.bookmarks.v1")).toBe("{}");
     expect(canWriteLocal("dawghwa.pos.ch-1")).toBe(false);
 
     // device preferences are not activity

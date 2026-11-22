@@ -43,6 +43,16 @@
   height: 44px;
   border-radius: 50%;
 }
+/* Streak chip sits beside the avatar; the Surprise me group takes the free space before it. */
+.home-bar .surprise {
+  margin-left: auto;
+}
+.home-bar-streak {
+  flex: none;
+}
+.app-header-streak {
+  flex: none;
+}
 /* Narrow phones: keep the bubble readable and the tap target whole by tightening around it. */
 @media (max-width: 379px) {
   .home-bar {
@@ -56,6 +66,10 @@
   }
   .home-bar .surprise-ico {
     width: 28px;
+  }
+  .home-bar-streak {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
   }
 }
 
@@ -153,7 +167,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 40px;
+    min-height: 44px;
     width: clamp(160px, 18vw, 240px);
     padding: 0 8px 0 14px;
     border-radius: var(--radius-full);

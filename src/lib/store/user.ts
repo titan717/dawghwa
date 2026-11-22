@@ -1,4 +1,5 @@
 import { chapterAliases } from "@/lib/chapters";
+import { toast } from "@/components/Toast";
 import { useSyncExternalStore } from "react";
 import type { Title } from "../titles";
 import { isIncognito } from "./incognito";
@@ -359,7 +360,8 @@ export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | 
 
 export async function markChaptersRead(t: Title, chapters: { id: string; number: number; variants?: { providerChapterId: string; variantId?: string }[] }[], read: boolean) {
   const profile = state.profile;
-  if (!profile || !chapters.length || isIncognito()) return;
+  if (isIncognito()) return void toast("Not saved in Incognito");
+  if (!profile || !chapters.length) return;
   const prev = state.progress.get(t.key);
   const now = Date.now();
   const map = { ...(prev?.read ?? {}) };

@@ -130,7 +130,7 @@ describe("passport and gains", () => {
 });
 
 describe("copy", () => {
-  // Streaks exist (D38), but never as guilt: nothing to keep, lose or miss.
+  // Streaks exist (D68), but never as guilt: nothing to keep, lose or miss.
   it("never uses guilt copy about streaks", () => {
     const sets = achievementSets({ ledger: ledger([], titles), library: [], collections: 0 });
     for (const s of sets) expect(`${s.name} ${s.rule} ${s.hint}`).not.toMatch(/keep your streak|lose|lost|miss/i);

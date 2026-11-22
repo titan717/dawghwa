@@ -22,7 +22,9 @@ test("primary navigation reaches every section and back works", async ({ page, i
     ["Profile", /\/profile$/, null],
   ] as const;
   for (const [name, url, heading] of sections) {
-    await nav.getByRole("link", { name }).click();
+    // Desktop reaches Profile through the avatar at the end of the header (one link, not two).
+    if (name === "Profile" && !isMobile) await page.locator("header.app-header .app-header-avatar").click();
+    else await nav.getByRole("link", { name }).click();
     await expect(page).toHaveURL(url);
     if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
   }

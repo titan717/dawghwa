@@ -28,6 +28,9 @@ import { useOnline } from "@/lib/platform/useOnline";
 import { useUser } from "@/lib/store/user";
 import { useSignInRequired } from "@/lib/store/accounts";
 import { SignIn } from "@/components/SignIn";
+import { StreakChip } from "@/components/StreakChip";
+import { IncognitoNotice } from "@/components/IncognitoNotice";
+import { useIncognito } from "@/lib/store/incognito";
 import { updateReady, applyUpdate } from "./pwa";
 import { markEntered, shouldShowLanding } from "./landing";
 import "@/styles/shell.css";
@@ -80,6 +83,7 @@ export function Shell() {
     updateReady.get,
   );
   const profile = useUser((s) => s.profile);
+  const incognito = useIncognito();
   const { rewards } = useSettings();
   const NAV = navItems(rewards);
   const ready = useUser((s) => s.ready);
@@ -134,7 +138,7 @@ export function Shell() {
           <Brand />
         </NavLink>
         <nav className="app-header-nav" aria-label="Primary">
-          {[...NAV, HISTORY].map(({ to, label, end }) => (
+          {[...NAV.filter((n) => n.to !== "/profile"), HISTORY].map(({ to, label, end }) => (
             <NavLink key={to} to={to} end={end}>
               {label}
             </NavLink>
@@ -162,6 +166,7 @@ export function Shell() {
             <span aria-hidden="true">Search</span>
             <kbd aria-hidden="true">/</kbd>
           </button>
+          <StreakChip to="/achievements" incognito={incognito} className="app-header-streak" />
           {profile && (
             <NavLink to="/profile" className="app-header-avatar" aria-label={`Profile: ${profile.name}`}>
               <ProfileAvatar profile={profile} size={34} />
@@ -189,6 +194,7 @@ export function Shell() {
             </button>
           </div>
         )}
+        {loc.pathname !== "/profile" && <IncognitoNotice />}
         <main id="main" tabIndex={-1}>
           <Outlet />
         </main>

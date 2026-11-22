@@ -9,7 +9,7 @@ describe("TasteSignalView", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("Taste signal: strong");
     expect(text).toContain("7 useful interactions");
-    expect(text).toContain("Because you read Solo Leveling.");
+    expect(text).toContain("Because of Solo Leveling.");
     expect(text).toContain("Based on 7 of your reads and ratings on this device");
     expect(text).not.toMatch(/%|confidence|accura/i);
     expect(container.querySelector("p")?.getAttribute("title")).toMatch(/not a measure of accuracy/);

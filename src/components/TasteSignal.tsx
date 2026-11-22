@@ -17,7 +17,7 @@ export function TasteSignalView({ evidence, because }: { evidence: TasteEvidence
       {" · "}
       {n} useful {n === 1 ? "interaction" : "interactions"}
       <br />
-      {because ? `Because you read ${because}. ` : ""}
+      {because ? `Because of ${because}. ` : ""}
       {based}.
     </p>
   );

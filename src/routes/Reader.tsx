@@ -28,6 +28,7 @@ import { api } from "@/lib/api/endpoints";
 import { chapterAliases, chapterBadge, chapterLabel, editionLabel, fallbackPlan, findChapter, isChapterRead, languageLabel, mapPosition, pickVariant, variantIdOf } from "@/lib/chapters";
 import { isBookmarked, removeBookmark, toggleBookmark, useBookmarks } from "@/lib/store/bookmarks";
 import { readPos, writePos } from "@/lib/reader/position";
+import { isIncognito } from "@/lib/store/incognito";
 
 /**
  * Scroll-only reader (D8). The top bar slides away on scroll-down and comes back on
@@ -274,7 +275,7 @@ function ReaderView() {
       const a = anchor.current;
       const p = Math.min(a ? a.page : latest.current.page, count - 1);
       // skip: Incognito turns this off at integration
-      writePos(profileId, chapter.id, { page: p, offset: a?.offset }, { skip: false });
+      writePos(profileId, chapter.id, { page: p, offset: a?.offset }, { skip: isIncognito() });
       void saveProgress({
         title,
         chapterId: chapter.id,
@@ -677,6 +678,7 @@ function ReaderView() {
   // "Version 2" style labels: versions are told apart by number, group, language and edition, never by where they come from
   const versionNo = (v: ChapterVariant) => (chapter?.variants?.findIndex((x) => variantIdOf(x) === variantIdOf(v)) ?? -1) + 1;
   const contentLang = chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null;
+  const creditsLine = [selectedVariant?.group?.name ?? chapter?.group?.name, contentLang].filter(Boolean).join(" · ");
 
   // Blueprint v2 "Pull to read next": at the very bottom of a chapter, dragging up past
   // the end by ~90px opens the next chapter. The visible button does the same for taps, mice and keyboards.
@@ -825,7 +827,7 @@ function ReaderView() {
         </div>
       )}
 
-      <p className="rd-credits">Credits: {[selectedVariant?.group?.name ?? chapter?.group?.name, contentLang].filter(Boolean).join(" · ")}</p>
+      {creditsLine && <p className="rd-credits">Credits: {creditsLine}</p>}
       {prev && (
         <div className="rd-end-links">
           <button className="btn btn-ghost" onClick={() => goChapter(prev)}>
@@ -870,7 +872,7 @@ function ReaderView() {
     </div>
   ) : pagesQ.isError ? (
     <div className="state state-center">
-      <ErrorState error={pagesQ.error} retry={() => (setFailed(new Set()), void pagesQ.refetch())} />
+      <ErrorState title="Chapter unavailable" error={pagesQ.error} retry={() => (setFailed(new Set()), void pagesQ.refetch())} />
       {chapter && (chapter.variants?.length ?? 0) <= 1 && <p className="muted">No other version of this chapter is available in the same language.</p>}
       {errorText(pagesQ.error).offline && <p className="muted">Chapter pages aren't stored offline. Reconnect to keep reading.</p>}
     </div>

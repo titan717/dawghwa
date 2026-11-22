@@ -10,7 +10,7 @@ import { errorText } from "./States";
 export function ResultsError({ error, retry, compact }: { error: unknown; retry?: () => void; compact?: boolean }) {
   const offline = errorText(error).offline;
   const title = offline ? "You're offline" : "Couldn't load results";
-  const body = offline ? "Reconnect to search. Your library and history are still here." : "Check your connection and try again.";
+  const body = offline ? "Reconnect to search. Your library and history are still here." : "Try again in a moment.";
   if (compact)
     return (
       <div className="inline-state" role="alert">

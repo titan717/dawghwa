@@ -13,8 +13,9 @@ import { useSyncExternalStore } from "react";
  *    recommender learn from (store/user.ts signal)
  *  - the learned model (intel/runtime.ts retrain) and reward moments (rewards/runtime.ts)
  *  - chapter comments (lib/comments.ts)
- *  - localStorage, except the few device preferences in LOCAL_ALLOW
- *    (search history, reader positions, bookmarks and similar are skipped)
+ *  - localStorage keys that record reading activity, listed in LOCAL_DENY_PREFIXES
+ *    (reader positions and search history). Everything else, such as settings and
+ *    deliberate edits like bookmarks, still saves, the same as library edits.
  *
  * Reading, browsing and explicit library edits keep working. This is not a
  * privacy or anonymity feature beyond that: network requests still happen and
@@ -46,14 +47,16 @@ export function useIncognito(): boolean {
 }
 
 /**
- * Device preferences that are not reading activity, so they may still be saved
- * while Incognito is on (changing the theme should stick).
+ * localStorage keys that record reading activity and so are skipped while
+ * Incognito is on. An explicit denylist: unknown keys (preferences, deliberate
+ * edits such as bookmarks, device caches) keep saving, so nothing a reader
+ * chose to save silently disappears on reload. Add new activity keys here.
  */
-export const LOCAL_ALLOW: ReadonlySet<string> = new Set(["dawghwa:settings", "dawghwa:library-view", "dawghwa:entered"]);
+export const LOCAL_DENY_PREFIXES: readonly string[] = ["dawghwa.pos.", "dawghwa:recent-searches:", "dawghwa:recent-search:"];
 
 /** True when a localStorage write for `key` should go through right now. */
 export function canWriteLocal(key: string): boolean {
-  return !on || LOCAL_ALLOW.has(key);
+  return !on || !LOCAL_DENY_PREFIXES.some((p) => key.startsWith(p));
 }
 
 // ------------------------------------------------------------ localStorage
@@ -65,6 +68,7 @@ export function canWriteLocal(key: string): boolean {
  * write like blocked storage and keep their value in memory.
  */
 let original: Storage["setItem"] | null = null;
+let guard: Storage["setItem"] | null = null;
 
 function localStore(): Storage | null {
   try {
@@ -78,14 +82,17 @@ function guardLocalStorage() {
   if (original || typeof Storage === "undefined") return;
   const orig = Storage.prototype.setItem;
   original = orig;
-  Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+  guard = function (this: Storage, key: string, value: string) {
     if (this === localStore() && !canWriteLocal(String(key))) return;
     return orig.call(this, key, value);
   };
+  Storage.prototype.setItem = guard;
 }
 
 function unguardLocalStorage() {
   if (!original) return;
-  Storage.prototype.setItem = original;
+  // Only undo our own patch; if something wrapped setItem after us, leave its wrapper in place.
+  if (Storage.prototype.setItem === guard) Storage.prototype.setItem = original;
   original = null;
+  guard = null;
 }

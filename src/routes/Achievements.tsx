@@ -7,6 +7,7 @@ import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { QuestList } from "@/components/Quests";
 import { EMBLEMS, FRAMES, needsLabel, unlocked, type Cosmetic } from "@/lib/rewards/cosmetics";
 import { StreakChip } from "@/components/StreakChip";
+import { useIncognito } from "@/lib/store/incognito";
 import { dayKey, meaningfulDays, streak as streakFor } from "@/lib/rewards/streak";
 import { weekStart } from "@/lib/rewards/quests";
 import { MascotSays } from "@/components/Mascot";
@@ -61,8 +62,9 @@ const when = (t: number) => new Date(t).toLocaleDateString(undefined, { month: "
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** Streak with a weekly freeze (D38). Derived from finished chapters and reading time; nothing to buy. */
+/** Streak with a weekly freeze (D68). Derived from finished chapters and reading time; nothing to buy. */
 function StreakCard({ events }: { events: EventRecord[] }) {
+  const incognito = useIncognito();
   const s = streakFor(events);
   const read = meaningfulDays(events);
   const frozen = new Set(s.frozen.map(dayKey));
@@ -74,11 +76,12 @@ function StreakCard({ events }: { events: EventRecord[] }) {
     const k = dayKey(d.getTime());
     return { name, k, read: read.has(k), frozen: frozen.has(k), future: k > today };
   });
+  if (incognito) return null;
   return (
     <section className="profile-block streak-block" aria-labelledby="streak-h">
       <div className="profile-block-head">
         <h2 id="streak-h">Streak</h2>
-        <p className="muted">Days in a row with a finished chapter or 5 minutes of reading. Each week brings one freeze that covers a single missed day by itself.</p>
+        <p className="muted">Days in a row with a finished chapter. Each week brings one freeze that covers a single missed day by itself.</p>
       </div>
       <div className="streak-row">
         {s.days > 0 ? <StreakChip streak={s} /> : <span className="muted">Read a chapter to start a streak.</span>}

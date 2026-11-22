@@ -2,7 +2,7 @@ import type { EventRecord } from "../store/db";
 import { isoWeek } from "./quests";
 
 /**
- * Reading streak (supersedes D22 "rhythm, not streak"; see D38).
+ * Reading streak (supersedes D22 "rhythm, not streak"; see D68).
  *
  * Derived, never stored: a pure function of the profile's event log, so it
  * travels with export/import and can't drift.
