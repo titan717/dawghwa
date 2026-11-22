@@ -105,7 +105,10 @@ p {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    /* without this an infinite animation restarts every 0.01ms and flickers */
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 .tabular {

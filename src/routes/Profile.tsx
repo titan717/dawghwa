@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Award, Download, Lock, LogOut, Plus, RotateCcw, Share2, Trash2, Upload } from "lucide-react";
+import { Award, Download, History, Lock, LogOut, Plus, RotateCcw, Share2, Trash2, Upload } from "lucide-react";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Segmented } from "@/components/Segmented";
 import { Kicker } from "@/components/Editorial";
@@ -15,6 +15,7 @@ import { Sheet } from "@/components/Layer";
 import { toast } from "@/components/Toast";
 import { useHead } from "@/lib/seo";
 import { updateSettings, useSettings } from "@/lib/settings";
+import { IncognitoSetting } from "@/components/Incognito";
 import { createProfile, deleteProfile, switchProfile, unhideTitle, updateProfile, useUser } from "@/lib/store/user";
 import { isMemoryStorage } from "@/lib/store/db";
 import { downloadJson, exportProfile, importProfile, MAX_TRANSFER_FILE_BYTES } from "@/lib/store/transfer";
@@ -415,6 +416,17 @@ export default function Profile() {
       <h2 className="settings-title" id="settings">
         Settings
       </h2>
+      <section className="settings-group" id="privacy" aria-labelledby="privacy-h">
+        <h3 id="privacy-h">Privacy</h3>
+        <IncognitoSetting />
+        <Link className="settings-row settings-link" to="/history">
+          <span>
+            <span className="label">Reading history</span>
+            <span className="hint">Everything this profile has opened, newest first. Remove single titles or clear it.</span>
+          </span>
+          <History size={18} aria-hidden="true" />
+        </Link>
+      </section>
       <section className="settings-group" id="rewards" aria-labelledby="rewards-h">
         <h3 id="rewards-h">Rewards</h3>
         <label className="switch settings-row">

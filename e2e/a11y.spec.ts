@@ -86,3 +86,54 @@ test("axe: home loading state has no serious violations", async ({ page }) => {
   await expect(page.locator(".hero-loading")).toBeVisible();
   await audit(page, "/ (loading)");
 });
+
+// Phase 1 accessibility review: keyboard operation and focus order on Onboarding and Search.
+test("keyboard: onboarding moves focus to each new question and names every control", async ({ page }) => {
+  await page.goto("/welcome");
+  await page.getByRole("button", { name: "Create reader" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { level: 1, name: "Name your reader" })).toBeFocused();
+  // colour swatches are named by colour, not hex code
+  await expect(page.getByRole("button", { name: "Orange" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Teal" }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("button", { name: "Teal" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("textbox", { name: "Reader name" }).fill("Keyboard reader");
+  await page.getByRole("button", { name: "Continue" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { level: 1, name: "Pick genres you like" })).toBeFocused();
+  const firstTile = page.locator(".onboard-tile").first();
+  await page.keyboard.press("Tab");
+  await expect(firstTile).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(firstTile).toHaveAttribute("aria-pressed", "true");
+  await audit(page, "welcome-genres");
+});
+
+test("keyboard: / opens Search with the field focused; Clear returns focus to it", async ({ page }) => {
+  await skipOnboarding(page);
+  await page.locator("body").press("/");
+  await expect(page).toHaveURL(/\/search/);
+  const field = page.getByRole("searchbox", { name: "Search titles" });
+  await expect(field).toBeFocused();
+  await page.keyboard.type("solo leveling");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Clear search" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("");
+  await expect(page.getByRole("group", { name: "Quick filters" })).toBeVisible();
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`axe: Incognito banner and switch have no serious violations (${theme})`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem("dawghwa:settings", JSON.stringify({ theme: t })), theme);
+    await skipOnboarding(page);
+    await page.locator("nav.bottomnav").getByRole("button", { name: "Incognito" }).click();
+    await page.getByText("Incognito is on").click(); // open the explanation
+    for (const path of ["/", "/search", "/profile"]) {
+      await page.goto(path);
+      await audit(page, `${path} (incognito)`);
+    }
+  });
+}

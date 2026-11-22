@@ -121,8 +121,8 @@ export default function Library() {
           <p className="muted">Saved on this device for {state.profile?.name ?? "this profile"}.</p>
         </div>
         <div className="lib-head-actions">
-          <Link className="icon-btn" to="/history" aria-label="Reading history" title="Reading history">
-            <History size={20} />
+          <Link className="btn btn-sm" to="/history">
+            <History size={16} aria-hidden="true" /> History
           </Link>
           <div className="segmented lib-view" role="radiogroup" aria-label="View">
             <button role="radio" aria-checked={view === "grid"} aria-label="Grid" onClick={() => setView("grid")}>

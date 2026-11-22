@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Ban, Bot, Check, Lock, Upload, UserPlus, Brain, Briefcase, Droplet, Flower2, HeartHandshake, Users, CloudRain, Crown, DoorOpen, Drama, Fingerprint, Flame, Ghost, GraduationCap, Heart, Hourglass, Landmark, RefreshCcw, Rocket, Shield, Siren, Skull, Smile, Sparkles, Sun, Swords, Trophy,
@@ -29,6 +29,17 @@ const ICONS: Record<string, ComponentType<{ size?: number; "aria-hidden"?: boole
 const AVOID = ["Gore", "Sexual Violence", "Boys' Love", "Girls' Love", "Harem", "Tragedy"];
 
 type Step = "hello" | "reader" | "genres" | "formats" | "avoid" | "ready";
+
+/** Each step's heading: screen readers hear which question is on screen. */
+const STEP_HEADINGS: Record<Exclude<Step, "ready">, string> = {
+  hello: "Welcome to Dawghwa",
+  reader: "Name your reader",
+  genres: "Pick genres you like",
+  formats: "Pick the formats you read",
+  avoid: "Choose anything to keep out of your picks",
+};
+/** Spoken names for PROFILE_COLORS (a hex code is not an accessible name). */
+const COLOR_NAMES: Record<string, string> = { "#ff5a36": "Orange", "#3fb8af": "Teal", "#f2b134": "Gold", "#8c7dff": "Violet", "#ef6f9a": "Pink", "#5aa9e6": "Blue" };
 
 /**
  * Mascot-led onboarding (blueprint pages 9-14, D29-D31): one question per screen with the
@@ -68,6 +79,13 @@ function OnboardingFlow() {
   const avoidList = vocab.data ? AVOID.filter((g) => known.has(g)) : AVOID;
   const toggle = (xs: string[], set: (v: string[]) => void, v: string) => set(xs.includes(v) ? xs.filter((x) => x !== v) : [...xs, v]);
   const current = order[step]!;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const moved = useRef(false);
+  // after Continue or Back, move focus to the new question (not on first paint)
+  useEffect(() => {
+    if (moved.current) heading.current?.focus();
+    moved.current = true;
+  }, [step]);
   const others = profiles.filter((p) => p.id !== profile?.id);
 
   const save = async (taste: boolean) => {
@@ -134,6 +152,9 @@ function OnboardingFlow() {
         </button>
       </header>
       <main>
+        <h1 className="sr-only" ref={heading} tabIndex={-1}>
+          {STEP_HEADINGS[current]}
+        </h1>
         <div className="onboard-mascot">
           <MascotSays size={current === "hello" ? 132 : 84} pose="welcome">
             {bubble[current]}
@@ -165,7 +186,7 @@ function OnboardingFlow() {
             <fieldset className="onboard-colors">
               <legend>Colour</legend>
               {PROFILE_COLORS.map((c) => (
-                <button key={c} type="button" className="onboard-color" style={{ background: c }} aria-pressed={color === c} aria-label={`Colour ${c}`} onClick={() => setColor(c)}>
+                <button key={c} type="button" className="onboard-color" style={{ background: c }} aria-pressed={color === c} aria-label={COLOR_NAMES[c] ?? c} onClick={() => setColor(c)}>
                   {color === c && <Check size={18} aria-hidden="true" />}
                 </button>
               ))}
@@ -244,11 +265,14 @@ async function hasData(profileId: string) {
 function Ready({ name, rewards, onDone }: { name: string; rewards: boolean; onDone: (to?: string) => void }) {
   const { quests } = useProgression();
   const q = rewards ? quests.current.find((x) => x.doneAt === undefined) : undefined;
+  // the whole screen changed: start keyboard and screen reader users at its heading
+  const h = useRef<HTMLHeadingElement>(null);
+  useEffect(() => h.current?.focus(), []);
   return (
-    <div className="onboard onboard-ready" role="status">
+    <div className="onboard onboard-ready">
       <main>
         <Mascot pose="done" size={148} />
-        <h1>Your experience is ready!</h1>
+        <h1 ref={h} tabIndex={-1}>Your experience is ready!</h1>
         <p className="onboard-sub">Welcome, {name}. Your shelf, picks and progress live on this device.</p>
         {q && (
           <section className="onboard-quest" aria-labelledby="first-quest-h">

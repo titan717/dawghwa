@@ -404,7 +404,7 @@ export default function Home() {
         )}
       </div>
       <Featured ctx={ctx} claims={claims} />
-      <nav className="mood-strip" aria-label="Quick picks">
+      <div className="mood-strip" role="group" aria-label="Quick picks">
         <button className="mood mood-lime" onClick={doSurprise}>
           <Dices size={17} /> Surprise me
         </button>
@@ -427,7 +427,7 @@ export default function Home() {
         >
           <RefreshCw size={16} /> Refresh feed
         </button>
-      </nav>
+      </div>
       <QuestStrip />
       <div className="feed">
         <ContinueReading />

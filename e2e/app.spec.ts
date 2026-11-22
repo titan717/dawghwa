@@ -28,6 +28,18 @@ test("primary navigation reaches every section and back works", async ({ page })
   await expect(page).toHaveURL(/\/achievements$/);
 });
 
+test("History has a labelled entry in Library and in Profile", async ({ page }) => {
+  await skipOnboarding(page);
+  const nav = page.locator("nav.bottomnav");
+  await nav.getByRole("link", { name: "Library" }).click();
+  await page.locator("main").getByRole("link", { name: "History", exact: true }).click();
+  await expect(page).toHaveURL(/\/history$/);
+  await expect(page.getByRole("heading", { level: 1, name: "History" })).toBeVisible();
+  await nav.getByRole("link", { name: "Profile" }).click();
+  await page.getByRole("link", { name: /Reading history/ }).click();
+  await expect(page).toHaveURL(/\/history$/);
+});
+
 test("Incognito is one tap away, shows while on, and lasts for the session only", async ({ page }) => {
   await skipOnboarding(page);
   const toggle = page.locator("nav.bottomnav").getByRole("button", { name: "Incognito" });
