@@ -214,13 +214,15 @@ test("Asura Scans: linked on the unified title page, native reader, real images,
   await page.screenshot({ path: "test-results/live-asura-reader.png" });
 });
 
-test("Scanlation site from 'Search all sources': provider title page, native reader, progress", async ({ page }) => {
+test("Scanlation site from 'Search more': provider title page, native reader, progress", async ({ page }) => {
   await page.goto("/search?q=ragnarok");
-  await page.getByRole("button", { name: "Search all sources" }).click();
-  const block = page.locator(".list").filter({ has: page.locator(".eyebrow", { hasText: /^Thunderscans ·/ }) });
-  await expect(block.locator("a.list-item").first()).toBeVisible({ timeout: 120_000 });
+  await page.getByRole("button", { name: "Search more" }).click();
+  // Wider results are one merged list with no source labels; pick this provider's entry by its link.
+  const block = page.locator(".more-results");
+  await expect(block.locator("a.list-item[href^='/title/thunderscans/']").first()).toBeVisible({ timeout: 120_000 });
+  await expect(block).not.toContainText(/thunderscans/i);
   // pick the intended series by name, and require it to be unambiguous, rather than whatever ranks first
-  const hit = block.locator("a.list-item").filter({ hasText: /solo leveling:?\s*ragnarok/i });
+  const hit = block.locator("a.list-item[href^='/title/thunderscans/']").filter({ hasText: /solo leveling:?\s*ragnarok/i });
   await expect(hit, "exactly one Thunderscans result for Solo Leveling: Ragnarok").toHaveCount(1);
   await hit.click();
   await expect(page).toHaveURL(/\/title\/thunderscans\//);
