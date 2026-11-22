@@ -1,6 +1,7 @@
 import type { EventRecord, LibraryRecord } from "../store/db";
 import type { Title } from "../titles";
 import { GENRES, genreKey } from "../genres";
+import { earns } from "./streak";
 
 /**
  * Progression is *derived*, never stored. The ledger is a pure function of the
@@ -16,9 +17,20 @@ import { GENRES, genreKey } from "../genres";
  *    final chapter number). Opening only the last chapter, or marking a series
  *    "Completed" by hand, earns nothing.
  *  - A new series and a new genre are earned on the first finished chapter in them.
+ *  - At most one XP award per chapter per day (in fact once per chapter, ever).
+ *  - A daily cap: no more than DAILY_XP_CAP XP per local calendar day, from all
+ *    reasons together. Chapters, series and stamps past the cap still count for
+ *    badges and the passport; only the XP stops. The cap applies to days from
+ *    DAILY_CAP_FROM on, so nobody loses XP or a level they already had.
+ *  - Events recorded in Incognito earn nothing.
  */
 
 export const XP = { chapter: 10, series: 25, complete: 100, genre: 15, quest: 50 } as const;
+
+/** Most XP one local calendar day can add. A big day of new series is about 200. */
+export const DAILY_XP_CAP = 300;
+/** Local midnight of the first day the cap applies to (the day it shipped). */
+export const DAILY_CAP_FROM = new Date(2026, 10, 23).getTime();
 
 export type XpReason = keyof typeof XP;
 export interface XpEntry {
@@ -48,7 +60,7 @@ const dayKey = (t: number) => {
 };
 
 export function ledger(events: Iterable<EventRecord>, titles: Map<string, Title>, extra: XpEntry[] = []): Ledger {
-  const evs = [...events].sort((a, b) => a.at - b.at || a.seq - b.seq);
+  const evs = [...events].filter(earns).sort((a, b) => a.at - b.at || a.seq - b.seq);
   const seenChapter = new Set<string>();
   const perSeries = new Map<string, number>();
   const seenSeries = new Set<string>();
@@ -86,7 +98,27 @@ export function ledger(events: Iterable<EventRecord>, titles: Map<string, Title>
   }
   for (const x of extra) entries.push(x);
   entries.sort((a, b) => a.at - b.at);
-  return { entries, total: entries.reduce((s, x) => s + x.xp, 0), chapters: seenChapter.size, series: seenSeries.size, completed: seenComplete.size, genres, activeDays: days.size };
+  const capped = capDaily(entries);
+  return { entries: capped, total: capped.reduce((s, x) => s + x.xp, 0), chapters: seenChapter.size, series: seenSeries.size, completed: seenComplete.size, genres, activeDays: days.size };
+}
+
+/** Applies DAILY_XP_CAP per local day (entries sorted by time). Trimmed-to-zero entries are dropped. */
+export function capDaily(entries: XpEntry[], cap = DAILY_XP_CAP, from = DAILY_CAP_FROM): XpEntry[] {
+  const used = new Map<string, number>();
+  const out: XpEntry[] = [];
+  for (const x of entries) {
+    if (x.at < from) {
+      out.push(x);
+      continue;
+    }
+    const k = dayKey(x.at);
+    const left = cap - (used.get(k) ?? 0);
+    const xp = Math.max(0, Math.min(x.xp, left));
+    if (!xp) continue;
+    used.set(k, (used.get(k) ?? 0) + xp);
+    out.push(xp === x.xp ? x : { ...x, xp });
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------ levels
@@ -184,7 +216,7 @@ export function achievementSets({ ledger: l, library, collections, quests = 0, c
     makeSet("series", "Story hopper", "Different series started", l.series, [1, 5, 25], ["series", "series"]),
     makeSet("complete", "The end", "Series read to the final chapter", l.completed, [1, 5, 15], ["series", "series"]),
     makeSet("genres", "Wide reader", "Genres you have read a chapter in", l.genres.size, [3, 8, 15], ["genre", "genres"]),
-    makeSet("days", "Regular", "Days you finished a chapter (any days, no streak)", l.activeDays, [3, 15, 50], ["day", "days"]),
+    makeSet("days", "Regular", "Days you finished a chapter (any days, in a row or not)", l.activeDays, [3, 15, 50], ["day", "days"]),
     makeSet("favourites", "Keeper", "Series in Favourites", lib.filter((r) => r.favorite).length, [1, 10, 30], ["favourite", "favourites"]),
     makeSet("collections", "Curator", "Collections you made", collections, [1, 3, 6], ["collection", "collections"]),
     makeSet("quests", "Quest hound", "Weekly quests completed", quests, [1, 5, 20], ["quest", "quests"]),
