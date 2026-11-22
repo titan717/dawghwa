@@ -8,13 +8,13 @@ test("first run shows onboarding once, then home", async ({ page }) => {
   await page.reload();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("main h1").first()).toBeAttached();
-  await expect(page.locator("nav.bottomnav, .sidebar nav").first()).toBeAttached();
+  await expect(page.locator("nav.bottomnav, header.app-header nav").first()).toBeAttached();
 });
 
 test("primary navigation reaches every section and back works", async ({ page, isMobile }) => {
   await skipOnboarding(page);
-  const nav = page.locator(isMobile ? "nav.bottomnav" : ".sidebar nav");
-  // History lives in the desktop sidebar; on mobile it is reached from Profile.
+  const nav = page.locator(isMobile ? "nav.bottomnav" : "header.app-header nav");
+  // History lives in the desktop header; on mobile it is reached from Profile.
   const sections = [
     ["My Series", /\/library$/, "My Series"],
     ...(isMobile ? [] : ([["History", /\/history$/, "History"]] as const)),
@@ -28,6 +28,34 @@ test("primary navigation reaches every section and back works", async ({ page, i
   }
   await page.goBack();
   await expect(page).toHaveURL(/\/discover/);
+});
+
+test("chrome stays put: desktop header is sticky with no sidebar, Home's bar stays on phones", async ({ page, isMobile }) => {
+  await skipOnboarding(page);
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  // Give the page enough height to scroll 1400px even before the feed has loaded.
+  await page.evaluate(() => document.querySelector("main")!.insertAdjacentHTML("beforeend", '<div data-test-spacer style="height:3000px"></div>'));
+  await page.evaluate(() => window.scrollTo(0, 1400));
+  await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThanOrEqual(1000);
+  const bar = page.locator(isMobile ? ".home-bar" : "header.app-header");
+  await expect(bar).toBeVisible();
+  const top = await bar.evaluate((el) => el.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThanOrEqual(1);
+  if (isMobile) {
+    await expect(page.locator("header.app-header")).toBeHidden();
+    await expect(page.locator(".home-bar").getByRole("button", { name: /Surprise me/ })).toBeVisible();
+  } else {
+    await expect(page.locator(".home-bar")).toBeHidden();
+    await expect(page.locator("header.app-header").getByRole("button", { name: /Surprise me/ })).toBeVisible();
+    await expect(page.locator("header.app-header nav").getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    await page.locator("header.app-header").getByRole("button", { name: /^Search/ }).click();
+    await expect(page).toHaveURL(/\/search/);
+    await page.goto("/library");
+    await expect(page.getByRole("heading", { level: 1, name: "My Series" })).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(page).toHaveURL(/\/search/);
+  }
 });
 
 test("no shell top bar; Discover is reached from Search", async ({ page }) => {
@@ -47,7 +75,7 @@ test("Rewards toggle hides achievements and gives the nav slot back to Discover"
   const toggle = page.getByRole("checkbox", { name: /Show rewards/ });
   await expect(toggle).toBeChecked();
   await toggle.uncheck();
-  const nav = page.locator(isMobile ? "nav.bottomnav" : ".sidebar nav");
+  const nav = page.locator(isMobile ? "nav.bottomnav" : "header.app-header nav");
   await expect(nav.getByRole("link", { name: "Achievements" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Discover" })).toBeVisible();
   await page.goto("/");
