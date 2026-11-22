@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { catalog, soloLevelingChapters } from "@/test/catalog";
 import { bookmarksFor, isBookmarked, removeBookmark, resetBookmarks, toggleBookmark } from "./bookmarks";
 
-const base = { titleKey: "mangadex:abc", chapterId: "t/en/ch:1", chapterLabel: "Chapter 1", page: 3, pageCount: 14, variantId: "mangadex:md-1", sourceId: "mangadex" };
+// Solo Leveling chapters 1 and 2 as the live unified list returns them (one AsuraScan version each)
+const [ch1, ch2] = soloLevelingChapters;
+const v1 = ch1!.variants[0]!;
+const base = { titleKey: catalog[0]!.key, chapterId: ch1!.id, chapterLabel: ch1!.label, page: 3, pageCount: 14, variantId: v1.variantId, sourceId: v1.sourceId };
 
 describe("bookmarks", () => {
   beforeEach(() => {
@@ -15,10 +19,10 @@ describe("bookmarks", () => {
     expect(toggleBookmark(base)).toBe(false);
     expect(isBookmarked(base.titleKey, base.chapterId, 3)).toBe(false);
   });
-  it("keys by canonical chapter, so another version of the chapter shares bookmarks", () => {
+  it("keys by canonical chapter key, so any version of that chapter finds the bookmark", () => {
     toggleBookmark(base);
-    expect(isBookmarked(base.titleKey, "t/en/ch:1", 3)).toBe(true);
-    expect(isBookmarked(base.titleKey, "t/en/ch:1.5", 3)).toBe(false);
+    expect(isBookmarked(base.titleKey, ch1!.id, 3)).toBe(true);
+    expect(isBookmarked(base.titleKey, ch2!.id, 3)).toBe(false);
   });
   it("removes a specific bookmark and keeps newest first", () => {
     toggleBookmark(base);

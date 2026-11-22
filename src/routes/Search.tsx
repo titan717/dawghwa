@@ -18,6 +18,7 @@ import { useBrowse, useVocabulary } from "@/lib/query";
 import { useHead } from "@/lib/seo";
 import { getCachedTitles } from "@/lib/store/db";
 import { useUser } from "@/lib/store/user";
+import { useIncognito } from "@/lib/incognito";
 import { useRankContext } from "@/lib/feed/context";
 import { fromResult, titlePath, type Title, isMature } from "@/lib/titles";
 import { coverSrc } from "@/lib/api/images";
@@ -198,6 +199,7 @@ function CategoryTile({ label, to, q }: { label: string; to: string; q: BrowseQu
 export default function Search() {
   const [params, setParams] = useSearchParams();
   const profileId = useUser((s) => s.profile?.id);
+  const incognito = useIncognito();
   const online = useOnline();
   const userTitles = useUser((s) => s.titles);
   const [text, setText] = useState(params.get("q") ?? "");
@@ -237,6 +239,7 @@ export default function Search() {
     const next = readRecent(profileId).filter((x) => x !== r);
     localStorage.setItem(recentKey(profileId), JSON.stringify(next));
     setRecent(next);
+    if (!next.length) input.current?.focus(); // the list (and the focused button) is gone
   };
   useHead({ title: q ? `Search: ${q}` : "Search", path: "/search", noindex: true });
 
@@ -253,14 +256,14 @@ export default function Search() {
     if (fromUrl !== q) setText(fromUrl);
   }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!q || q.length < 3) return;
+    if (!q || q.length < 3 || incognito) return; // Incognito: recent searches are not saved
     const t = setTimeout(() => {
       const next = [q, ...readRecent(profileId).filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 8);
       localStorage.setItem(recentKey(profileId), JSON.stringify(next));
       setRecent(next);
     }, 2500);
     return () => clearTimeout(t);
-  }, [q, profileId]);
+  }, [q, profileId, incognito]);
 
   const intent = useMemo(() => withFilters(parseIntent(q, vocab.data), { kinds: fKinds, status: fStatus, tags: fTags, order: fOrder }), [q, vocab.data, params]); // eslint-disable-line react-hooks/exhaustive-deps
   // typed but not yet debounced: show the result skeleton at once so the screen answers the keystroke
@@ -381,7 +384,7 @@ export default function Search() {
             </button>
           )}
         </form>
-        <div className="filter-bar" aria-label="Quick filters">
+        <div className="filter-bar" role="group" aria-label="Quick filters">
           <button className="chip chip-filter" onClick={() => setSheet(true)} aria-label={`All filters${filterCount ? `, ${filterCount} active` : ""}`}>
             <SlidersHorizontal size={15} /> Filters{filterCount ? ` · ${filterCount}` : ""}
           </button>
@@ -405,7 +408,7 @@ export default function Search() {
           )}
         </div>
         {tagSuggest.length > 0 && (
-          <div className="suggest-row" aria-label="Genre suggestions">
+          <div className="suggest-row" role="group" aria-label="Genre suggestions">
             {tagSuggest.map((t) => (
               <button
                 key={t.name}
@@ -421,7 +424,7 @@ export default function Search() {
           </div>
         )}
         {hasQuery && intent.chips.length > 0 && !exactTitle && (
-          <div className="chips understood" aria-label="Understood filters">
+          <div className="chips understood" role="group" aria-label="Understood filters">
             <span className="understood-label">Understood</span>
             {intent.chips.map((c) => (
               <span key={c.id} className={`chip ${c.where === "local" ? "chip-local" : ""} ${c.negative ? "chip-neg" : ""}`} title={c.where === "local" ? "Applied on this device after fetching results" : "Sent to the catalogue as a filter"}>
@@ -436,12 +439,13 @@ export default function Search() {
       {!showResults && (
         <div className="search-home">
           {recent.length > 0 && (
-            <section className="section">
+            <section className="section" aria-labelledby="recent-h">
               <div className="section-head">
                 <div className="section-titles">
-                  <h2>Recent searches</h2>
+                  <h2 id="recent-h">Recent searches</h2>
+                  {incognito && <p className="muted">Incognito is on: new searches aren't added here.</p>}
                 </div>
-                <button className="btn btn-sm btn-ghost" onClick={() => (localStorage.removeItem(recentKey(profileId)), setRecent([]))}>
+                <button className="btn btn-sm btn-ghost" onClick={() => (localStorage.removeItem(recentKey(profileId)), setRecent([]), input.current?.focus())}>
                   Clear all
                 </button>
               </div>

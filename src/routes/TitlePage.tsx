@@ -11,6 +11,7 @@ import { toast } from "@/components/Toast";
 import { useBrowse, useChapters, useSources, useTitle, type ChapterList as ChapterListData } from "@/lib/query";
 import { chapterBadge, chapterLabel, editionLabel, findChapter, isChapterRead, languageLabel, pickVariant, variantIdOf } from "@/lib/chapters";
 import { useHead } from "@/lib/seo";
+import { INCOGNITO_MARKS } from "@/lib/incognito";
 import { markChaptersRead, rate, setStatus, signal, toggleFavorite, useUser } from "@/lib/store/user";
 import type { LibraryStatus } from "@/lib/store/db";
 import { useRankContext } from "@/lib/feed/context";
@@ -241,7 +242,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
           <ArrowDownUp size={15} /> {desc ? "Newest" : "Oldest"}
         </button>
         {readCount > 0 && (
-          <button className="btn btn-sm btn-ghost" onClick={() => void markChaptersRead(title, chapters, false).then(() => toast("Read marks cleared"))}>
+          <button className="btn btn-sm btn-ghost" onClick={() => void markChaptersRead(title, chapters, false).then((ok) => toast(ok ? "Read marks cleared" : INCOGNITO_MARKS))}>
             Clear read
           </button>
         )}
@@ -318,7 +319,7 @@ function ChapterList({ title, data, readable, sourceName, onRetry, retrying }: {
                     <Layers size={15} /> {vs.length}
                   </button>
                 )}
-                <button className="icon-btn" aria-label={isRead ? `Mark ${label} unread` : `Mark ${label} read`} aria-pressed={isRead} onClick={() => void markChaptersRead(title, [c], !isRead)}>
+                <button className="icon-btn" aria-label={isRead ? `Mark ${label} unread` : `Mark ${label} read`} aria-pressed={isRead} onClick={() => void markChaptersRead(title, [c], !isRead).then((ok) => ok || toast(INCOGNITO_MARKS))}>
                   {isRead ? <Check size={18} /> : isCurrent ? <span className="dot" /> : <Check size={18} style={{ opacity: 0.25 }} />}
                 </button>
               </span>

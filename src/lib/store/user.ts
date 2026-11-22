@@ -1,5 +1,6 @@
 import { chapterAliases } from "@/lib/chapters";
 import { useSyncExternalStore } from "react";
+import { isIncognito } from "@/lib/incognito";
 import type { Title } from "../titles";
 import { cacheTitles, db, getCachedTitles, kvGet, kvSet, type EventRecord, type Hidden, type LibraryRecord, type LibraryStatus, type ProfileRecord, type ProgressRecord } from "./db";
 
@@ -187,6 +188,8 @@ export async function rememberTitle(t: Title) {
 export async function signal(kind: SignalKind, t: Title | undefined, titleKey = t?.key, extra: { value?: number; context?: string } = {}) {
   const profile = state.profile;
   if (!profile || !titleKey) return;
+  // Incognito: no taste or history signals for this profile (src/lib/incognito.ts)
+  if (isIncognito()) return;
   if (t) await rememberTitle(t);
   const e: EventRecord = { profileId: profile.id, seq: ++seq, kind, titleKey, at: Date.now(), ...extra };
   await (await db()).put("events", e);
@@ -310,10 +313,12 @@ const RETURN_GAP_MS = 6 * 3600 * 1000;
 /**
  * Save reading position. A chapter only counts as read when the reader
  * actually reached its end (`finished`), never just because it was opened.
+ * Incognito: nothing is saved (no progress, read marks, signals or automatic
+ * library status); the reader keeps its position in memory instead.
  */
 export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | undefined> {
   const profile = state.profile;
-  if (!profile) return;
+  if (!profile || isIncognito()) return;
   const now = Date.now();
   const prev = state.progress.get(u.title.key);
   const read = { ...(prev?.read ?? {}) };
@@ -353,9 +358,10 @@ export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | 
   return rec;
 }
 
-export async function markChaptersRead(t: Title, chapters: { id: string; number: number; variants?: { providerChapterId: string; variantId?: string }[] }[], read: boolean) {
+/** Returns false when nothing was saved (no profile, no chapters, or Incognito is on). */
+export async function markChaptersRead(t: Title, chapters: { id: string; number: number; variants?: { providerChapterId: string; variantId?: string }[] }[], read: boolean): Promise<boolean> {
   const profile = state.profile;
-  if (!profile || !chapters.length) return;
+  if (!profile || !chapters.length || isIncognito()) return false;
   const prev = state.progress.get(t.key);
   const now = Date.now();
   const map = { ...(prev?.read ?? {}) };
@@ -372,6 +378,7 @@ export async function markChaptersRead(t: Title, chapters: { id: string; number:
   const progress = new Map(state.progress);
   progress.set(t.key, rec);
   set({ progress });
+  return true;
 }
 
 export async function removeFromHistory(key: string) {

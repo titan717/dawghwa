@@ -28,6 +28,31 @@ test("primary navigation reaches every section and back works", async ({ page })
   await expect(page).toHaveURL(/\/achievements$/);
 });
 
+test("Incognito is one tap away, shows while on, and lasts for the session only", async ({ page }) => {
+  await skipOnboarding(page);
+  const toggle = page.locator("nav.bottomnav").getByRole("button", { name: "Incognito" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const banner = page.getByRole("status").filter({ hasText: "Incognito is on" });
+  await expect(banner).toBeVisible();
+  await banner.getByText("Incognito is on").click();
+  await expect(banner).toContainText("not encryption");
+  // survives a reload of this tab (sessionStorage) ...
+  await page.reload();
+  await expect(page.locator("nav.bottomnav").getByRole("button", { name: "Incognito" })).toHaveAttribute("aria-pressed", "true");
+  // ... and recent searches are not saved while it is on
+  await page.goto("/search?q=solo%20leveling");
+  await page.waitForTimeout(3200);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("dawghwa:recent-searches:")).map((k) => localStorage.getItem(k)))).not.toContainEqual(expect.stringContaining("solo leveling"));
+  await page.getByRole("button", { name: "Turn off" }).click();
+  await expect(banner).toHaveCount(0);
+  // a new tab starts with Incognito off
+  const other = await page.context().newPage();
+  await other.goto("/library");
+  await expect(other.locator("nav.bottomnav").getByRole("button", { name: "Incognito" })).toHaveAttribute("aria-pressed", "false");
+});
+
 test("no shell top bar; Discover is reached from Search", async ({ page }) => {
   await skipOnboarding(page);
   await expect(page.locator("header.topbar")).toHaveCount(0);

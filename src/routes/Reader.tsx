@@ -16,6 +16,8 @@ import { clamp, useAutoHideBar, useStripZoom } from "@/lib/readerGestures";
 import { AUTO_SCROLL_SPEEDS, nudgeSpeed, useAutoScroll } from "@/lib/autoScroll";
 import { relativeTime } from "@/lib/time";
 import { rate, saveProgress, useUser } from "@/lib/store/user";
+import { readPos, writePos } from "@/lib/store/position";
+import { IncognitoChip } from "@/components/Incognito";
 import { useSignInRequired } from "@/lib/store/accounts";
 import { SignIn } from "@/components/SignIn";
 import { lifecycle, onBack, setImmersive, haptic } from "@/lib/platform";
@@ -103,6 +105,7 @@ function ReaderView() {
   const title = t.data;
   const chapters = useChapters(title);
   const prog = useUser((s) => (title ? s.progress.get(title.key) : undefined));
+  const profileId = useUser((s) => s.profile?.id);
   const rating = useUser((s) => (title ? s.library.get(title.key)?.rating : undefined));
   const [pageRefreshKey, setPageRefreshKey] = useState(0);
 
@@ -141,7 +144,7 @@ function ReaderView() {
   const next = idx >= 0 ? list[idx + 1] : undefined;
 
   // a synchronous position mirror covers reloads that land before the IndexedDB write commits
-  const mirror = chapterKey ? readPos(chapterKey) : undefined;
+  const mirror = chapterKey ? readPos(profileId, chapterKey) : undefined;
   const fresh = mirror && (!sameChapter(prog?.chapterId) || mirror.t > (prog?.updatedAt ?? 0)) ? mirror : undefined;
   const paramPage = Number(params.get("p") ?? (fresh ? fresh.page : sameChapter(prog?.chapterId) ? prog!.page : 0)) || 0;
   const carried = carry && carry.variantId === activeVariantId && count ? mapPosition(carry.page, carry.count, count) : undefined;
@@ -271,7 +274,7 @@ function ReaderView() {
       if (scroller.current && !pinning.current) anchor.current = measureAnchor(scroller.current) ?? anchor.current;
       const a = anchor.current;
       const p = Math.min(a ? a.page : latest.current.page, count - 1);
-      writePos(chapter.id, p, a?.offset);
+      writePos(profileId, chapter.id, p, a?.offset);
       void saveProgress({
         title,
         chapterId: chapter.id,
@@ -288,7 +291,7 @@ function ReaderView() {
         lastChapterNumber: list.at(-1)?.number,
       });
     },
-    [title, chapter, count, list, selectedVariant],
+    [title, chapter, count, list, selectedVariant, profileId],
   );
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -855,6 +858,7 @@ function ReaderView() {
             {[chapter ? chapterLabel(chapter) : "", `via ${prettySource(sourceName)}`, chapter?.language ? languageLabel(selectedVariant?.language ?? chapter.language) : null, count ? `${Math.min(page, count - 1) + 1} / ${count}` : ""].filter(Boolean).join(" · ")}
           </span>
         </div>
+        <IncognitoChip />
         {target && (
           <button className="icon-btn rd-cm-btn" aria-label={`Comments (${comments.length})`} aria-haspopup="dialog" onClick={() => setComments("read")}>
             <MessageCircle size={20} />
@@ -1206,31 +1210,6 @@ function RewardBeat({ m }: { m: Moment }) {
 /** Height of the fixed reader bar, so restored positions land below it. */
 function barHeight(): number {
   return document.querySelector<HTMLElement>(".rd-top")?.offsetHeight ?? 0;
-}
-
-const POS_KEY = "dawghwa.pos.";
-function readPos(chapterId: string): { page: number; offset?: number; t: number } | undefined {
-  try {
-    const v = JSON.parse(localStorage.getItem(POS_KEY + chapterId) ?? "null");
-    return v && typeof v.page === "number" && typeof v.t === "number" ? v : undefined;
-  } catch {
-    return undefined;
-  }
-}
-function writePos(chapterId: string, page: number, offset?: number) {
-  try {
-    localStorage.setItem(POS_KEY + chapterId, JSON.stringify({ page, offset, t: Date.now() }));
-    // keep the mirror small: drop all but the 20 most recent chapters
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith(POS_KEY));
-    if (keys.length > 20)
-      keys
-        .map((k) => [k, readPos(k.slice(POS_KEY.length))?.t ?? 0] as const)
-        .sort((a, b) => a[1] - b[1])
-        .slice(0, keys.length - 20)
-        .forEach(([k]) => localStorage.removeItem(k));
-  } catch {
-    /* storage full or blocked: IndexedDB progress still applies */
-  }
 }
 
 /** The page at the top of the viewport and how far into it (0–1) the reader has scrolled. */

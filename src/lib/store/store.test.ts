@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { catalog } from "@/test/catalog";
+import { catalog, soloLevelingChapters } from "@/test/catalog";
 import { createProfile, deleteProfile, getUser, initUser, profileEvents, saveProgress, setStatus, switchProfile, toggleFavorite } from "./user";
 import { exportProfile, importProfile } from "./transfer";
 import { db } from "./db";
 
-const [a, b, c] = catalog;
+const [a, b, c] = catalog; // a: Solo Leveling
+const CH1 = soloLevelingChapters[0]!.id; // its real canonical chapter 1 key
 
 function progressUpdate(t = a!, over: Partial<Parameters<typeof saveProgress>[0]> = {}) {
-  return { title: t, chapterId: "ch-1", chapterNumber: 1, page: 0, pageCount: 20, fraction: 0, finished: false, ...over };
+  return { title: t, chapterId: CH1, chapterNumber: 1, page: 0, pageCount: 20, fraction: 0, finished: false, ...over };
 }
 
 beforeEach(async () => {
@@ -26,7 +27,7 @@ describe("reader progress", () => {
 
   it("does not mark read when stopped part way", async () => {
     const rec = await saveProgress(progressUpdate(a, { page: 15, fraction: 0.75 }));
-    expect(rec?.read["ch-1"]).toBeUndefined();
+    expect(rec?.read[CH1]).toBeUndefined();
     expect(rec?.page).toBe(15);
   });
 
@@ -34,7 +35,7 @@ describe("reader progress", () => {
     await saveProgress(progressUpdate(a, { page: 19, fraction: 1, finished: true }));
     await saveProgress(progressUpdate(a, { page: 19, fraction: 1, finished: true }));
     const rec = getUser().progress.get(a!.key)!;
-    expect(rec.read["ch-1"]).toBeTypeOf("number");
+    expect(rec.read[CH1]).toBeTypeOf("number");
     expect(rec.maxReadNumber).toBe(1);
     expect(getUser().library.get(a!.key)?.status).toBe("reading");
     const reads = (await profileEvents()).filter((e) => e.kind === "chapter_read");
@@ -100,7 +101,7 @@ describe("export / import", () => {
     expect(getUser().profile!.id).toBe(imported.id);
     expect(getUser().library.get(a!.key)?.status).toBe("completed");
     expect(getUser().library.get(b!.key)?.favorite).toBe(true);
-    expect(getUser().progress.get(a!.key)?.read["ch-1"]).toBeTypeOf("number");
+    expect(getUser().progress.get(a!.key)?.read[CH1]).toBeTypeOf("number");
     expect(getUser().titles.get(a!.key)?.title).toBe(a!.title);
     expect((await profileEvents()).length).toBe(data.events.length);
 

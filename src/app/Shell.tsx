@@ -9,6 +9,7 @@ import { useOnline } from "@/lib/platform/useOnline";
 import { useUser } from "@/lib/store/user";
 import { useSignInRequired } from "@/lib/store/accounts";
 import { SignIn } from "@/components/SignIn";
+import { IncognitoBanner, IncognitoNavButton } from "@/components/Incognito";
 import { updateReady, applyUpdate } from "./pwa";
 import { markEntered, shouldShowLanding } from "./landing";
 
@@ -22,7 +23,10 @@ const AWARDS: NavItem = { to: "/achievements", label: "Awards", icon: Award, ari
 const DISCOVER: NavItem = { to: "/discover", label: "Discover", icon: Compass };
 const PROFILE: NavItem = { to: "/profile", label: "Profile", icon: User };
 
-/** Five slots (docs/DECISIONS.md D7). With Rewards off the Awards slot gives way to Discover. */
+/**
+ * Five destinations (docs/DECISIONS.md D7) plus the Incognito switch. With Rewards off
+ * the Awards slot gives way to Discover.
+ */
 export const navItems = (rewards: boolean): NavItem[] => [HOME, SEARCH, LIBRARY, rewards ? AWARDS : DISCOVER, PROFILE];
 
 function useApiHealth() {
@@ -67,6 +71,7 @@ export function Shell() {
     <div className="shell" data-own-chrome={immersive || undefined}>
       <a className="skip-link" href="#main">Skip to content</a>
       <div className="main">
+        <IncognitoBanner />
         {!online ? (
           <div className="banner banner-warn" role="status">
             <WifiOff size={16} /> You're offline. Library, history and saved data still work; new content will load when you reconnect.
@@ -98,6 +103,7 @@ export function Shell() {
             {label}
           </NavLink>
         ))}
+        <IncognitoNavButton />
       </nav>
       <Toasts />
       <Celebrations />
