@@ -38,6 +38,11 @@ export interface UserState {
   events: EventRecord[];
   /** Monotonic counter bumped on every signal (drives re-ranking). */
   signalVersion: number;
+  /**
+   * Incognito: while on, reading position, reading history and reading events are not saved.
+   * Session-only: it lives in memory and is off again after a reload.
+   */
+  incognito: boolean;
 }
 
 let state: UserState = {
@@ -50,6 +55,7 @@ let state: UserState = {
   titles: new Map(),
   events: [],
   signalVersion: 0,
+  incognito: false,
 };
 const subs = new Set<() => void>();
 const signalListeners = new Set<(e: EventRecord, t?: Title) => void>();
@@ -137,6 +143,11 @@ async function activate(profile: ProfileRecord, profiles?: ProfileRecord[]) {
   });
 }
 
+/** Turn Incognito on or off for this session. Never written to storage. */
+export function setIncognito(on: boolean) {
+  set({ incognito: on });
+}
+
 export async function switchProfile(id: string) {
   const d = await db();
   const p = await d.get("profiles", id);
@@ -186,7 +197,8 @@ export async function rememberTitle(t: Title) {
 
 export async function signal(kind: SignalKind, t: Title | undefined, titleKey = t?.key, extra: { value?: number; context?: string } = {}) {
   const profile = state.profile;
-  if (!profile || !titleKey) return;
+  // Incognito: reading activity is not recorded, so it never feeds history or recommendations.
+  if (!profile || !titleKey || state.incognito) return;
   if (t) await rememberTitle(t);
   const e: EventRecord = { profileId: profile.id, seq: ++seq, kind, titleKey, at: Date.now(), ...extra };
   await (await db()).put("events", e);
@@ -310,10 +322,11 @@ const RETURN_GAP_MS = 6 * 3600 * 1000;
 /**
  * Save reading position. A chapter only counts as read when the reader
  * actually reached its end (`finished`), never just because it was opened.
+ * Incognito: nothing is saved here (no position, no history, no completion).
  */
 export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | undefined> {
   const profile = state.profile;
-  if (!profile) return;
+  if (!profile || state.incognito) return;
   const now = Date.now();
   const prev = state.progress.get(u.title.key);
   const read = { ...(prev?.read ?? {}) };
@@ -355,7 +368,8 @@ export async function saveProgress(u: ProgressUpdate): Promise<ProgressRecord | 
 
 export async function markChaptersRead(t: Title, chapters: { id: string; number: number; variants?: { providerChapterId: string; variantId?: string }[] }[], read: boolean) {
   const profile = state.profile;
-  if (!profile || !chapters.length) return;
+  // Incognito: manual read marks are history too, so they are not stored either.
+  if (!profile || !chapters.length || state.incognito) return;
   const prev = state.progress.get(t.key);
   const now = Date.now();
   const map = { ...(prev?.read ?? {}) };
