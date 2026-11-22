@@ -46,9 +46,11 @@
   --panel-offset: 4px;
 
   --gutter: clamp(16px, 4vw, 32px);
-  --sidebar-w: 232px;
-  /* The shell has no top bar (docs/DECISIONS.md D6). Kept as a token so sticky offsets stay in one place. */
+  /* Height of the persistent top chrome that sticky page elements sit below. Phones and
+     tablets have none (Home's own bar is sticky but local to Home); desktop's .app-header
+     sets it to 64px in src/styles/shell.css. No sidebar anywhere. */
   --topbar-h: 0px;
+  --app-header-h: 64px;
   --bottomnav-h: 62px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

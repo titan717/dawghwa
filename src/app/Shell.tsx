@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   NavLink,
   Outlet,
@@ -12,6 +12,7 @@ import {
   History,
   Home,
   Search,
+  Shuffle,
   User,
   WifiOff,
   CloudOff,
@@ -29,6 +30,7 @@ import { useSignInRequired } from "@/lib/store/accounts";
 import { SignIn } from "@/components/SignIn";
 import { updateReady, applyUpdate } from "./pwa";
 import { markEntered, shouldShowLanding } from "./landing";
+import "@/styles/shell.css";
 
 const Landing = lazy(() => import("@/routes/Landing"));
 
@@ -38,12 +40,26 @@ const SEARCH: NavItem = { to: "/search", label: "Search", icon: Search };
 const LIBRARY: NavItem = { to: "/library", label: "My Series", icon: BookOpen, fill: true };
 const DISCOVER: NavItem = { to: "/discover", label: "Discover", icon: Compass };
 const PROFILE: NavItem = { to: "/profile", label: "Profile", icon: User, fill: true };
+/** Desktop header only: on phones History is reached from Profile. */
+const HISTORY: NavItem = { to: "/history", label: "History", icon: History };
 
 /**
  * Five slots, in the v2 blueprint order. Streak, XP and level live on the profile card,
  * not in the main navigation, so the slots are the same with Rewards on or off.
  */
 export const navItems = (_rewards?: boolean): NavItem[] => [HOME, DISCOVER, SEARCH, LIBRARY, PROFILE];
+
+/** True once the page has scrolled a little: the sticky header and Home's bar pick up a soft edge. */
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 4);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  return scrolled;
+}
 
 function useApiHealth() {
   return useSyncExternalStore(
@@ -68,6 +84,7 @@ export function Shell() {
   const NAV = navItems(rewards);
   const ready = useUser((s) => s.ready);
   const locked = useSignInRequired();
+  const scrolled = useScrolled();
   useEffect(() => {
     // Reward moments are optional and lazy: the engine stays out of the initial bundle.
     if (ready) void import("@/lib/rewards/runtime").then((m) => m.startRewards());
@@ -108,57 +125,50 @@ export function Shell() {
       </Suspense>
     );
   return (
-    <div className="shell" data-own-chrome={immersive || undefined}>
+    <div className="shell" data-own-chrome={immersive || undefined} data-scrolled={scrolled || undefined}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <aside className="sidebar" aria-label="Primary">
-        <NavLink to="/" aria-label="Dawghwa home">
+      <header className="app-header" data-scrolled={scrolled || undefined}>
+        <NavLink to="/" end className="app-header-brand" aria-label="Dawghwa home">
           <Brand />
         </NavLink>
-        <nav>
-          {NAV.map(({ to, label, icon: Icon, end, aria }) => (
+        <nav className="app-header-nav" aria-label="Primary">
+          {[...NAV, HISTORY].map(({ to, label, end }) => (
             <NavLink key={to} to={to} end={end}>
-              <Icon size={19} strokeWidth={1.9} />
-              {aria ?? label}
+              {label}
             </NavLink>
           ))}
-          <NavLink to="/history">
-            <History size={19} strokeWidth={1.9} />
-            History
-          </NavLink>
         </nav>
-        <div className="sidebar-section">Shortcuts</div>
-        <NavLink className="side-link" to="/discover?order=rating">
-          Top rated
-        </NavLink>
-        <NavLink className="side-link" to="/discover?status=completed">
-          Completed series
-        </NavLink>
-        <NavLink className="side-link" to="/discover?kind=manhwa&order=latest">
-          New manhwa chapters
-        </NavLink>
-        <div className="sidebar-foot">
-          {profile && (
-            <NavLink
-              to="/profile"
-              className="side-link"
-              style={{ minHeight: 52 }}
+        <div className="app-header-actions">
+          {loc.pathname === "/" && (
+            <button
+              type="button"
+              className="app-header-icon"
+              onClick={() => nav("/?surprise=1")}
+              aria-label="Surprise me: open a random pick"
+              title="Surprise me"
             >
+              <Shuffle size={19} strokeWidth={1.9} aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="app-header-search"
+            onClick={() => nav("/search")}
+            aria-label="Search (press / or Ctrl+K)"
+          >
+            <Search size={17} strokeWidth={1.9} aria-hidden="true" />
+            <span aria-hidden="true">Search</span>
+            <kbd aria-hidden="true">/</kbd>
+          </button>
+          {profile && (
+            <NavLink to="/profile" className="app-header-avatar" aria-label={`Profile: ${profile.name}`}>
               <ProfileAvatar profile={profile} size={34} />
-              <span>
-                {profile.name}
-                <span
-                  className="dim"
-                  style={{ display: "block", fontSize: 11 }}
-                >
-                  Stored on this device
-                </span>
-              </span>
             </NavLink>
           )}
         </div>
-      </aside>
+      </header>
       <div className="main">
         {!online ? (
           <div className="banner banner-warn" role="status">

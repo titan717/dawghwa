@@ -461,7 +461,7 @@ export default function Home() {
   return (
     <div className="page home">
       <h1 className="sr-only">Dawghwa home</h1>
-      {/* The shell has no top bar (D6): on phones and tablets Home carries the brand, and it scrolls away. */}
+      {/* Phones and tablets: Home carries the brand in a sticky bar (shell.css). Desktop uses the app header instead. */}
       <div className="home-bar">
         <Brand />
         <button className="surprise" onClick={doSurprise} aria-label="Surprise me: open a random pick">
