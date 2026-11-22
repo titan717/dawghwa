@@ -76,7 +76,7 @@ The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the stru
 
 - The bottom navigation is the only persistent global navigation at every width. Do not add a competing desktop sidebar or a global top bar.
 - Page headings and contextual controls belong inside each screen. Reader and title-page controls are local to those experiences, not global chrome.
-- Under 600px: phone. Keep the five labelled bottom-nav destinations readable and make room for reader controls and safe areas; the hero is 4:5.
+- Under 600px: phone. Keep the five labelled bottom-nav destinations and the Incognito switch readable and make room for reader controls and safe areas; the hero is 4:5.
 - 600 to 1023px: tablet. Centre the bottom navigation (up to 120px per item); the hero is 4:3.
 - 1024px and up: desktop. Keep the bottom navigation as the sole persistent navigation. Let catalogue and reading content use the wider canvas without introducing a sidebar; the hero uses blurred key art with the cover on the right.
 - At every width, preserve a clear active destination, keyboard focus, and sufficient space above the bottom navigation so it never covers focused controls.

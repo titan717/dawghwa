@@ -28,6 +28,8 @@ A practical map of the product, its design, and the codebase. Start with the gui
 - [Research plan](research/plan.md)
 - [Research index](research/README.md)
 - [Decisions log](DECISIONS.md)
+- [PR #30 plan](PR30_PLAN.md)
+- [Test titles: live provider availability](TEST_TITLES.md)
 
 ## Source of truth
 
