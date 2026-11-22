@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Trash2, X } from "lucide-react";
 import { Cover } from "@/components/Cover";
 import { Kicker } from "@/components/Editorial";
-import { EmptyState } from "@/components/States";
+import { EmptyState, ListSkeleton } from "@/components/States";
 import { Sheet } from "@/components/Layer";
 import { toast } from "@/components/Toast";
 import { useHead } from "@/lib/seo";
@@ -22,6 +22,7 @@ const dayLabel = (ts: number) => {
 export default function HistoryPage() {
   const progress = useUser((s) => s.progress);
   const titles = useUser((s) => s.titles);
+  const ready = useUser((s) => s.ready);
   const [confirm, setConfirm] = useState(false);
   useHead({ title: "History", noindex: true });
   const groups = useMemo(() => {
@@ -42,18 +43,19 @@ export default function HistoryPage() {
           <h1>History</h1>
           <p className="muted">Where you left off in each series.</p>
         </div>
-        {groups.length > 0 && (
+        {ready && groups.length > 0 && (
           <button className="btn btn-ghost" onClick={() => setConfirm(true)}>
             <Trash2 size={16} /> Clear
           </button>
         )}
       </header>
-      {!groups.length && (
+      {!ready && <ListSkeleton />}
+      {ready && !groups.length && (
         <EmptyState title="No reading history yet" pose="reading" action={<Link className="btn btn-primary" to="/">Browse home</Link>}>
           Chapters you read appear here so you can pick up where you stopped.
         </EmptyState>
       )}
-      {groups.map(([label, xs]) => (
+      {ready && groups.map(([label, xs]) => (
         <section key={label} className="section" style={{ marginTop: 20 }}>
           <h2 className="eyebrow">{label}</h2>
           <div className="list">
