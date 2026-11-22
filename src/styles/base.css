@@ -8,13 +8,15 @@ html {
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   background: var(--bg);
+  /* keyboard focus and in-page anchors land below the sticky header, never under it */
+  scroll-padding-top: calc(var(--topbar-h) + var(--space-2));
 }
 body {
   margin: 0;
   min-height: 100dvh;
   font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.5;
+  line-height: var(--leading-body);
   color: var(--ink);
   background: var(--bg);
   font-feature-settings: "cv11", "ss01";
@@ -47,10 +49,10 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--weight-display);
   font-stretch: var(--display-stretch);
   letter-spacing: -0.02em;
-  line-height: 1.08;
+  line-height: var(--leading-tight);
   margin: 0;
   text-wrap: balance;
 }
@@ -82,7 +84,7 @@ p {
   position: fixed;
   left: 12px;
   top: -60px;
-  z-index: 100;
+  z-index: var(--z-skip);
   padding: 10px 14px;
   background: var(--accent);
   color: var(--accent-ink);
@@ -105,8 +107,14 @@ p {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+/* Anything focused keeps clear of the sticky header (WCAG 2.4.11 focus not obscured). */
+:focus {
+  scroll-margin-top: calc(var(--topbar-h) + var(--space-2));
 }
 .tabular {
   font-variant-numeric: tabular-nums;

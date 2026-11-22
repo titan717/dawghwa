@@ -1,27 +1,47 @@
-/* Dawghwa design tokens — blueprint structure (flat near-black stage, artwork first,
-   pill chips, one bright action colour) carrying the "Manga Culture + Playful Discovery"
-   identity (mascot, Archivo display, lime / vermilion / lavender).
-   Dark-first charcoal ink; light theme is warm paper with deep ink (not an inversion).
-   Accents have jobs: lime = primary action and active state, vermilion = "new / hot"
-   badges and ranks, lavender = secondary emphasis and the mascot's colour. Documented in docs/DESIGN_SYSTEM.md. */
+/* Dawghwa design tokens, Phase 2: "Night Market, Paper Scroll".
+   Direction A (Neon Night Market) sets the stage: a cool, cinematic near-black with a
+   coral action colour, and a crisp cool-paper light counterpart. Direction B (Paper Scroll)
+   becomes the sepia theme and contributes violet as an accent. Rationale, the full API and
+   measured contrast ratios: docs/DESIGN.md. Every text/background pair in every theme and
+   accent is verified by `npm run contrast` (scripts/contrast-check.mjs), which reads THIS file,
+   so keep values as plain hex / rgb() and keep the block selectors below as they are.
+
+   Attribute API (all on <html>):
+     data-theme   = dark | light | amoled | sepia | system   (no attribute = dark)
+     data-accent  = coral | violet | lime | gold | mono       (no attribute = coral)
+     data-density = compact | comfortable | spacious          (no attribute = comfortable)
+     data-reduce-motion (boolean)                             (plus prefers-reduced-motion)
+
+   Accents are defined twice, once for dark stages (--acc-dk-*) and once for light stages
+   (--acc-lt-*); each theme block picks its family. So accents never need theme x accent
+   combination selectors. */
+
 :root {
-  /* Archivo (variable weight + width) is the only display face: wide/black for headlines,
-     condensed for chapter numbers and labels. Inter for UI and reading. */
+  /* Archivo (variable weight + width) for display, Inter for UI and reading. Both self-hosted
+     via @fontsource-variable (src/main.tsx); no runtime font requests. */
   --font-display: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --display-stretch: 100%;
   --label-stretch: 68%;
 
   /* type scale (1.2 minor third, fluid at the top) */
-  --text-2xs: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-md: 1.0625rem;
-  --text-lg: 1.25rem;
+  --text-2xs: 0.6875rem; /* 11px: labels only, never body */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-md: 1.0625rem; /* 17px */
+  --text-lg: 1.25rem; /* 20px */
   --text-xl: clamp(1.375rem, 1.1rem + 1vw, 1.75rem);
   --text-2xl: clamp(1.75rem, 1.3rem + 2vw, 2.75rem);
   --text-3xl: clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem);
+  --leading-tight: 1.08;
+  --leading-snug: 1.25;
+  --leading-body: 1.5;
+  --tracking-label: 0.06em;
+  --weight-regular: 400;
+  --weight-medium: 550;
+  --weight-bold: 700;
+  --weight-display: 800;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -36,204 +56,519 @@
 
   --radius-xs: 3px;
   --radius-sm: 6px;
-  --radius-card: 8px; /* covers and tiles, as in the blueprint */
+  --radius-card: 8px; /* covers and tiles */
   --radius-md: 10px;
-  --radius-lg: 14px; /* hero cards, sheets */
-  --radius-full: 999px;
+  --radius-lg: 14px; /* sheets, hero cards */
+  --radius-full: 999px; /* chips, pills */
 
-  /* panel language: ink-bordered frames with a hard offset shadow, used selectively */
   --panel-border: 2px;
   --panel-offset: 4px;
+  --border-w: 1px;
+  --border-w-strong: 2px; /* selected / focused state change */
 
   --gutter: clamp(16px, 4vw, 32px);
-  --sidebar-w: 232px;
-  /* The shell has no top bar (docs/DECISIONS.md D6). Kept as a token so sticky offsets stay in one place. */
+  --content-max: 1440px;
+  --sidebar-w: 232px; /* legacy: the Phase 1 shell removes the sidebar */
+
+  /* Global header (Phase 1/2). Stable height, safe-area aware: the header's box is
+     --header-total tall, with --safe-top as top padding. Sticky offsets use --topbar-h. */
+  --header-h: 56px;
+  --header-total: calc(var(--header-h) + var(--safe-top));
+  /* The shell sets --topbar-h: var(--header-total) once the header is mounted (builder_a). */
   --topbar-h: 0px;
-  --bottomnav-h: 62px;
+  --bottomnav-h: 62px; /* legacy: removed with the bottom nav */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --keyboard-h: 0px;
 
+  /* stacking */
+  --z-base: 1;
+  --z-sticky: 20; /* tab bars, jump rails */
+  --z-header: 40;
+  --z-menu: 60; /* header More menu, popovers */
+  --z-sheet: 80;
+  --z-toast: 85;
+  --z-skip: 100;
+
+  /* covers */
+  --cover-ratio: 2 / 3;
+
+  /* motion: short fades and border/colour changes only. Nothing travels, scales or drifts.
+     The travel tokens below are kept (zeroed) so older rules stay valid. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
-  --ease-pop: cubic-bezier(0.3, 1.4, 0.5, 1);
-  --dur-fast: 120ms;
-  --dur: 200ms;
-  --dur-slow: 320ms;
+  --ease-pop: var(--ease-out);
+  --dur-fast: 120ms; /* hover, press, border colour */
+  --dur: 180ms; /* fades: menus, toasts, image load */
+  --dur-slow: 240ms; /* sheets fading in */
+  --dur-celebrate: 3200ms; /* how long a reward card stays up (dwell, not motion) */
+  --dur-enter: 180ms;
+  --dur-ring: 240ms;
+  --stagger: 0ms;
+  --rise: 0px;
+  --pop-scale: 1;
+  --ease-spring: var(--ease-out);
+  --dur-slide: 420ms; /* programmatic scroll tween of shelves (scroll position, not a transform) */
+  --dur-drift: 22s;
+  --drift-scale: 1; /* no ken-burns */
+  --lift: 0px; /* hover uses a border change, not a lift */
+  --peel: 18px;
+  --peel-hover: var(--peel);
+  --panel-travel: 0px;
+  --blur-chrome: 12px;
+  --ease-spring-physics: var(--ease-out);
+  --dur-spring: 180ms;
+  --dur-bar-hide: 180ms; /* reader bar fades */
+  --dur-bar-show: var(--dur-fast);
+  --chapter-rise: 0px;
 
-  /* motion for reward moments (Phase 1). Reduced motion zeroes these below. */
-  --dur-celebrate: 3200ms; /* how long a reward card stays up */
-  --dur-enter: 360ms; /* reward card / badge entrance */
-  --dur-ring: 700ms; /* progress ring fill */
-  --stagger: 45ms; /* per-item delay in badge grids */
-  --rise: 10px; /* entrance travel distance */
-  --pop-scale: 1.08;
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* discovery surfaces (UI polish phase 1). Reduced motion zeroes the travel below. */
-  --dur-slide: 420ms; /* hero slide / shelf arrow tween */
-  --dur-drift: 22s; /* hero key-art ken-burns cycle */
-  --drift-scale: 1.08; /* how far the key art pushes in */
-  --lift: -4px; /* card hover / focus lift */
-
-  /* title page (UI polish phase 2) */
-  --peel: 18px; /* cover corner peel, resting */
-  --peel-hover: 34px;
-  --panel-travel: 24px; /* tab panel slide-in distance */
-  --blur-chrome: 12px; /* frosted sticky bars, sheets and toasts */
-
-  /* reader (UI polish phase 3). A real damped spring (stiffness 260, damping 24, mass 1),
-     sampled into linear() where supported; the cubic-bezier is the fallback shape. */
-  --ease-spring-physics: cubic-bezier(0.25, 1.15, 0.4, 1);
-  --dur-spring: 550ms; /* the spring's settle time */
-  --dur-bar-hide: 200ms; /* reader bar slides away on scroll-down */
-  --dur-bar-show: var(--dur-fast); /* and comes back immediately on scroll-up / tap */
-  --chapter-rise: 32px; /* a new chapter's pages spring up this far */
-
-  /* brand constants (theme independent) */
+  /* brand constants (theme independent; the mascot and stickers) */
   --vermilion: #ff5948;
   --lime: #b8f35a;
   --lavender: #b8a5f7;
-  --on-bright: #151519; /* text on vermilion / lime / lavender fills: ≥ 5.9:1 */
+  --on-bright: #151519; /* text on vermilion / lime / lavender fills */
+
+  /* ---- accent palettes. Default = coral (Direction A). ---- */
+  --acc-dk-fill: #ff8a65;
+  --acc-dk-hover: #ffa283;
+  --acc-dk-ink: #0b0d12;
+  --acc-dk-text: #ff8a65;
+  --acc-dk-soft: rgb(255 138 101 / 0.14);
+  --acc-lt-fill: #b4234d;
+  --acc-lt-hover: #9a1d41;
+  --acc-lt-ink: #ffffff;
+  --acc-lt-text: #a51f47; /* brief #b4234d is 4.30:1 on sepia surface-3; darkened for text only */
+  --acc-lt-soft: rgb(180 35 77 / 0.08);
+
+  /* density: comfortable (default) */
+  --density: 1;
+  --control-h: 44px; /* never below 44px: touch target floor */
+  --row-h: 56px; /* list rows, menu rows, chapter rows */
+  --card-min: 132px; /* grid column minimum */
+  --grid-gap: 16px;
+  --stack-gap: 24px; /* between page sections */
+  --pad-card: 12px;
+  --pad-chip: 4px 10px;
 }
 
-/* Dark: near-black "ink" stage like the blueprint, flat surfaces, no frames.
-   Lime is the action colour (the blueprint's green CTA role, in Dawghwa's own hue). */
+/* ---- accent options (AA-verified in every theme by scripts/contrast-check.mjs) ---- */
+:root[data-accent="violet"] {
+  --acc-dk-fill: #d0a7ef;
+  --acc-dk-hover: #dcbcf4;
+  --acc-dk-ink: #0b0d12;
+  --acc-dk-text: #d0a7ef;
+  --acc-dk-soft: rgb(208 167 239 / 0.14);
+  --acc-lt-fill: #6b3fa0;
+  --acc-lt-hover: #5a3488;
+  --acc-lt-ink: #ffffff;
+  --acc-lt-text: #6b3fa0;
+  --acc-lt-soft: rgb(107 63 160 / 0.1);
+}
+:root[data-accent="lime"] {
+  --acc-dk-fill: #b8f35a;
+  --acc-dk-hover: #c8f77a;
+  --acc-dk-ink: #151519;
+  --acc-dk-text: #b8f35a;
+  --acc-dk-soft: rgb(184 243 90 / 0.14);
+  --acc-lt-fill: #3b6300;
+  --acc-lt-hover: #2f5000;
+  --acc-lt-ink: #ffffff;
+  --acc-lt-text: #3b6300;
+  --acc-lt-soft: rgb(59 99 0 / 0.1);
+}
+:root[data-accent="gold"] {
+  --acc-dk-fill: #f2c35b;
+  --acc-dk-hover: #f6d27f;
+  --acc-dk-ink: #0b0d12;
+  --acc-dk-text: #f2c35b;
+  --acc-dk-soft: rgb(242 195 91 / 0.14);
+  --acc-lt-fill: #7a4f00;
+  --acc-lt-hover: #643f00;
+  --acc-lt-ink: #ffffff;
+  --acc-lt-text: #7a4f00;
+  --acc-lt-soft: rgb(122 79 0 / 0.1);
+}
+:root[data-accent="mono"] {
+  --acc-dk-fill: #f3f4f6;
+  --acc-dk-hover: #ffffff;
+  --acc-dk-ink: #0b0d12;
+  --acc-dk-text: #f3f4f6;
+  --acc-dk-soft: rgb(243 244 246 / 0.12);
+  --acc-lt-fill: #171923;
+  --acc-lt-hover: #2a2d3a;
+  --acc-lt-ink: #ffffff;
+  --acc-lt-text: #171923;
+  --acc-lt-soft: rgb(23 25 35 / 0.08);
+}
+
+/* ---- density ---- */
+:root[data-density="compact"] {
+  --density: 0.85;
+  --row-h: 48px;
+  --card-min: 108px;
+  --grid-gap: 10px;
+  --stack-gap: 16px;
+  --pad-card: 8px;
+  --pad-chip: 3px 8px;
+}
+:root[data-density="spacious"] {
+  --density: 1.15;
+  --control-h: 48px;
+  --row-h: 64px;
+  --card-min: 156px;
+  --grid-gap: 22px;
+  --stack-gap: 36px;
+  --pad-card: 16px;
+  --pad-chip: 5px 12px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 64px;
+  }
+}
+
+/* ============ themes ============ */
+
+/* Dark (default): Neon Night Market. Cool near-black stage; art carries the colour. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0e0e10;
-  --bg-raised: #141417;
-  --surface: #1c1c20;
-  --surface-2: #26262b;
-  --surface-3: #313137;
+  --bg: #0b0d12;
+  --bg-raised: #10131a;
+  --surface: #141821;
+  --surface-2: #1c2330;
+  --surface-3: #263042;
   --line: rgb(255 255 255 / 0.08);
   --line-strong: rgb(255 255 255 / 0.16);
-  --ink: #f5f5f1; /* 18.3:1 on bg */
-  --ink-2: #c9c9c3; /* 12.1:1 */
-  --ink-3: #9b9b95; /* 7.0:1 on bg, 6.2:1 on surface */
-  --ink-4: #66666a; /* decorative / disabled only */
-  --frame: #f5f5f1;
-  --accent: var(--lime);
-  --accent-hover: #c8f77a;
-  --accent-ink: var(--on-bright);
-  --accent-soft: rgb(184 243 90 / 0.14);
-  --accent-text: #b8f35a; /* 14.6:1 on bg */
+  --line-ui: #6b7385; /* input and control borders: >= 3:1 on every surface */
+  --ink: #f3f4f6;
+  --ink-2: #c6cad3;
+  --ink-3: #a3aab8;
+  --ink-4: #5b6270; /* decorative / disabled only, never informative text */
+  --frame: #f3f4f6;
+  --accent: var(--acc-dk-fill);
+  --accent-hover: var(--acc-dk-hover);
+  --accent-ink: var(--acc-dk-ink);
+  --accent-soft: var(--acc-dk-soft);
+  --accent-text: var(--acc-dk-text);
+  --new: var(--lime);
+  --new-ink: var(--on-bright);
+  --new-text: #b8f35a;
   --hot: var(--vermilion);
-  --hot-text: #ff7a6b; /* 7.4:1 on bg */
+  --hot-ink: var(--on-bright);
+  --hot-text: #ff7a6b;
   --lime-text: #b8f35a;
   --lime-soft: rgb(184 243 90 / 0.14);
   --lavender-text: #c4b5fa;
   --lavender-soft: rgb(184 165 247 / 0.15);
   --good: #7fd69a;
   --warn: #f2c35b;
-  --bad: #ff7a72;
+  --bad: #ff8a80;
+  --chip-bg: #1c2330;
+  --chip-ink: #c6cad3;
   --scrim: rgb(0 0 0 / 0.72);
-  --on-art: #ffffff; /* text placed over artwork (always behind a dark gradient) */
-  /* bottom of the slide, where the copy sits, is >= 0.82 black: white type stays >= 7:1 on any art (scripts/qa/hero-contrast.mjs) */
+  --header-bg: rgb(11 13 18 / 0.86);
+  --on-art: #ffffff;
   --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.42) 44%, rgb(0 0 0 / 0.82) 64%, rgb(0 0 0 / 0.95) 100%);
   --art-fade-side: linear-gradient(90deg, rgb(8 8 10 / 0.9) 0%, rgb(8 8 10 / 0.62) 50%, rgb(8 8 10 / 0.2) 100%);
   --tp-backdrop-fade: linear-gradient(180deg, color-mix(in srgb, var(--bg) 45%, transparent) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 40%, var(--bg) 86%);
-  --shadow-cover: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 40px -8px rgb(0 0 0 / 0.6), 0 40px 80px -24px rgb(0 0 0 / 0.5);
+  --elev-1: 0 1px 0 rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.35);
+  --elev-2: 0 1px 0 rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
+  --elev-3: 0 24px 64px rgb(0 0 0 / 0.6);
+  --shadow-cover: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 40px -8px rgb(0 0 0 / 0.6);
   --shadow-peel: -2px -2px 6px rgb(0 0 0 / 0.35);
   --peel-under-a: #f4efe6;
   --peel-under-b: #b9b3a8;
-  --shadow-lift: 0 2px 0 rgb(0 0 0 / 0.4), 0 14px 28px rgb(0 0 0 / 0.55);
-  --shadow: 0 1px 0 rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
-  --shadow-lg: 0 24px 64px rgb(0 0 0 / 0.6);
+  --shadow-lift: var(--elev-1);
+  --shadow: var(--elev-2);
+  --shadow-lg: var(--elev-3);
   --hard-shadow: none;
   --halftone: rgb(255 255 255 / 0.06);
-  --skeleton-a: #19191d;
-  --skeleton-b: #25252a;
+  --skeleton-a: #141821;
+  --skeleton-b: #1c2330;
+  --reader-bg: #0b0d12;
+  --reader-ink: #f3f4f6;
+  --reader-bar: rgb(16 19 26 / 0.92);
+  --meta-theme: #0b0d12; /* <meta name="theme-color"> and the Android system bars */
 }
 
-/* Light: warm paper, deep ink. Lime stays a fill; its text form is a deep olive. */
+/* AMOLED: true black for OLED phones; same inks and accents as dark. */
+[data-theme="amoled"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-raised: #07080b;
+  --surface: #0e1117;
+  --surface-2: #161b24;
+  --surface-3: #212836;
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.18);
+  --line-ui: #6b7385;
+  --ink: #f3f4f6;
+  --ink-2: #c6cad3;
+  --ink-3: #a3aab8;
+  --ink-4: #555c69;
+  --frame: #f3f4f6;
+  --accent: var(--acc-dk-fill);
+  --accent-hover: var(--acc-dk-hover);
+  --accent-ink: var(--acc-dk-ink);
+  --accent-soft: var(--acc-dk-soft);
+  --accent-text: var(--acc-dk-text);
+  --new: var(--lime);
+  --new-ink: var(--on-bright);
+  --new-text: #b8f35a;
+  --hot: var(--vermilion);
+  --hot-ink: var(--on-bright);
+  --hot-text: #ff7a6b;
+  --lime-text: #b8f35a;
+  --lime-soft: rgb(184 243 90 / 0.14);
+  --lavender-text: #c4b5fa;
+  --lavender-soft: rgb(184 165 247 / 0.15);
+  --good: #7fd69a;
+  --warn: #f2c35b;
+  --bad: #ff8a80;
+  --chip-bg: #161b24;
+  --chip-ink: #c6cad3;
+  --scrim: rgb(0 0 0 / 0.8);
+  --header-bg: rgb(0 0 0 / 0.88);
+  --on-art: #ffffff;
+  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.45) 44%, rgb(0 0 0 / 0.85) 64%, rgb(0 0 0 / 1) 100%);
+  --art-fade-side: linear-gradient(90deg, rgb(0 0 0 / 0.92) 0%, rgb(0 0 0 / 0.64) 50%, rgb(0 0 0 / 0.2) 100%);
+  --tp-backdrop-fade: linear-gradient(180deg, color-mix(in srgb, var(--bg) 45%, transparent) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 40%, var(--bg) 86%);
+  --elev-1: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --elev-2: 0 0 0 1px rgb(255 255 255 / 0.1);
+  --elev-3: 0 0 0 1px rgb(255 255 255 / 0.12);
+  --shadow-cover: 0 0 0 1px rgb(255 255 255 / 0.06);
+  --shadow-peel: -2px -2px 6px rgb(0 0 0 / 0.5);
+  --peel-under-a: #f4efe6;
+  --peel-under-b: #b9b3a8;
+  --shadow-lift: var(--elev-1);
+  --shadow: var(--elev-2);
+  --shadow-lg: var(--elev-3);
+  --hard-shadow: none;
+  --halftone: rgb(255 255 255 / 0.06);
+  --skeleton-a: #0e1117;
+  --skeleton-b: #161b24;
+  --reader-bg: #000000;
+  --reader-ink: #f3f4f6;
+  --reader-bar: rgb(0 0 0 / 0.92);
+  --meta-theme: #000000;
+}
+
+/* Light: Direction A's light counterpart. Cool paper, deep ink. */
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f5f1;
+  --bg: #f7f8fc;
   --bg-raised: #ffffff;
-  --surface: #ecebe6;
-  --surface-2: #e2e1db;
-  --surface-3: #d6d5ce;
-  --line: rgb(17 17 20 / 0.1);
-  --line-strong: rgb(17 17 20 / 0.2);
-  --ink: #111114; /* 18.0:1 on paper */
-  --ink-2: #3d3d42; /* 10.4:1 */
-  --ink-3: #5f5f64; /* 6.1:1 on paper, 5.4:1 on surface */
-  --ink-4: #9a9a9e;
-  --frame: #111114;
-  --accent: var(--lime);
-  --accent-hover: #a6e744;
-  --accent-ink: var(--on-bright);
-  --accent-soft: rgb(120 180 20 / 0.16);
-  --accent-text: #3b6300; /* 6.9:1 on paper */
+  --surface: #eef0f6;
+  --surface-2: #e4e7ef;
+  --surface-3: #d7dbe5;
+  --line: rgb(23 25 35 / 0.1);
+  --line-strong: rgb(23 25 35 / 0.2);
+  --line-ui: #767c8c;
+  --ink: #171923;
+  --ink-2: #3a3f4e;
+  --ink-3: #555b6c;
+  --ink-4: #9499a6;
+  --frame: #171923;
+  --accent: var(--acc-lt-fill);
+  --accent-hover: var(--acc-lt-hover);
+  --accent-ink: var(--acc-lt-ink);
+  --accent-soft: var(--acc-lt-soft);
+  --accent-text: var(--acc-lt-text);
+  --new: var(--lime);
+  --new-ink: var(--on-bright);
+  --new-text: #3b6300;
   --hot: var(--vermilion);
-  --hot-text: #b8281a; /* 5.6:1 on paper */
+  --hot-ink: var(--on-bright);
+  --hot-text: #b0261a;
   --lime-text: #3b6300;
   --lime-soft: rgb(120 180 20 / 0.16);
   --lavender-text: #5d43c8;
   --lavender-soft: rgb(184 165 247 / 0.3);
   --good: #1d6a41;
-  --warn: #7a4f00; /* 5.4:1 on surface-2 (was 4.5:1, failed over the warn stripes) */
+  --warn: #7a4f00;
   --bad: #b3261e;
-  --scrim: rgb(17 17 20 / 0.5);
+  --chip-bg: #e4e7ef;
+  --chip-ink: #3a3f4e;
+  --scrim: rgb(23 25 35 / 0.5);
+  --header-bg: rgb(247 248 252 / 0.9);
   --on-art: #ffffff;
   --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.4) 44%, rgb(0 0 0 / 0.8) 64%, rgb(0 0 0 / 0.94) 100%);
   --art-fade-side: linear-gradient(90deg, rgb(8 8 10 / 0.88) 0%, rgb(8 8 10 / 0.6) 50%, rgb(8 8 10 / 0.2) 100%);
   --tp-backdrop-fade: linear-gradient(180deg, color-mix(in srgb, var(--bg) 45%, transparent) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 45%, var(--bg) 86%);
-  --shadow-cover: 0 2px 4px rgb(17 17 20 / 0.12), 0 10px 24px -8px rgb(17 17 20 / 0.24), 12px 18px 40px -20px rgb(17 17 20 / 0.2); /* stays clear of the dark kicker text below the cover */
-  --shadow-peel: -2px -2px 6px rgb(17 17 20 / 0.18);
+  --elev-1: 0 1px 0 rgb(23 25 35 / 0.05), 0 4px 12px rgb(23 25 35 / 0.08);
+  --elev-2: 0 1px 0 rgb(23 25 35 / 0.05), 0 8px 24px rgb(23 25 35 / 0.1);
+  --elev-3: 0 24px 64px rgb(23 25 35 / 0.18);
+  --shadow-cover: 0 2px 4px rgb(23 25 35 / 0.12), 0 10px 24px -8px rgb(23 25 35 / 0.24);
+  --shadow-peel: -2px -2px 6px rgb(23 25 35 / 0.18);
   --peel-under-a: #ffffff;
   --peel-under-b: #d9d6cd;
-  --shadow-lift: 0 2px 0 rgb(17 17 20 / 0.06), 0 14px 28px rgb(17 17 20 / 0.18);
-  --shadow: 0 1px 0 rgb(17 17 20 / 0.05), 0 8px 24px rgb(17 17 20 / 0.1);
-  --shadow-lg: 0 24px 64px rgb(17 17 20 / 0.18);
+  --shadow-lift: var(--elev-1);
+  --shadow: var(--elev-2);
+  --shadow-lg: var(--elev-3);
   --hard-shadow: none;
-  --halftone: rgb(17 17 20 / 0.07);
-  --skeleton-a: #e6e5df;
-  --skeleton-b: #f1f0eb;
+  --halftone: rgb(23 25 35 / 0.07);
+  --skeleton-a: #e4e7ef;
+  --skeleton-b: #eef0f6;
+  --reader-bg: #eef0f6;
+  --reader-ink: #171923;
+  --reader-bar: rgb(247 248 252 / 0.94);
+  --meta-theme: #f7f8fc;
 }
 
-@supports (transition-timing-function: linear(0, 1)) {
-  :root {
-    --ease-spring-physics: linear(0, 0.024, 0.083, 0.162, 0.256, 0.352, 0.451, 0.545, 0.629, 0.707, 0.774, 0.833, 0.882, 0.921, 0.953, 0.978, 0.997, 1.01, 1.019, 1.025, 1.028, 1.029, 1.029, 1.027, 1.025, 1.022, 1.02, 1.017, 1.014, 1.011, 1.009, 1.007, 1.005, 1.004, 1.002, 1.002, 1.001, 1, 1, 0.999, 1);
+/* Sepia: Direction B, Paper Scroll. Warm paper and brown ink for long reading sessions. */
+[data-theme="sepia"] {
+  color-scheme: light;
+  --bg: #f5f0e6;
+  --bg-raised: #fffcf5;
+  --surface: #ece5d6;
+  --surface-2: #e3dac8;
+  --surface-3: #ddd3bf;
+  --line: rgb(40 33 26 / 0.12);
+  --line-strong: rgb(40 33 26 / 0.22);
+  --line-ui: #85776a;
+  --ink: #28211a;
+  --ink-2: #4a3f33;
+  --ink-3: #5d5145;
+  --ink-4: #a0937f;
+  --frame: #28211a;
+  --accent: var(--acc-lt-fill);
+  --accent-hover: var(--acc-lt-hover);
+  --accent-ink: var(--acc-lt-ink);
+  --accent-soft: var(--acc-lt-soft);
+  --accent-text: var(--acc-lt-text);
+  --new: var(--lime);
+  --new-ink: var(--on-bright);
+  --new-text: #365a00;
+  --hot: var(--vermilion);
+  --hot-ink: var(--on-bright);
+  --hot-text: #a3231a;
+  --lime-text: #365a00;
+  --lime-soft: rgb(120 180 20 / 0.16);
+  --lavender-text: #5a3fb8;
+  --lavender-soft: rgb(184 165 247 / 0.3);
+  --good: #1b6038;
+  --warn: #6e4700;
+  --bad: #a3231a;
+  --chip-bg: #e3dac8;
+  --chip-ink: #4a3f33;
+  --scrim: rgb(40 33 26 / 0.5);
+  --header-bg: rgb(245 240 230 / 0.9);
+  --on-art: #ffffff;
+  --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.4) 44%, rgb(0 0 0 / 0.8) 64%, rgb(0 0 0 / 0.94) 100%);
+  --art-fade-side: linear-gradient(90deg, rgb(20 14 8 / 0.88) 0%, rgb(20 14 8 / 0.6) 50%, rgb(20 14 8 / 0.2) 100%);
+  --tp-backdrop-fade: linear-gradient(180deg, color-mix(in srgb, var(--bg) 45%, transparent) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 45%, var(--bg) 86%);
+  --elev-1: 0 1px 0 rgb(40 33 26 / 0.06), 0 4px 12px rgb(40 33 26 / 0.08);
+  --elev-2: 0 1px 0 rgb(40 33 26 / 0.06), 0 8px 24px rgb(40 33 26 / 0.12);
+  --elev-3: 0 24px 64px rgb(40 33 26 / 0.2);
+  --shadow-cover: 0 2px 4px rgb(40 33 26 / 0.14), 0 10px 24px -8px rgb(40 33 26 / 0.26);
+  --shadow-peel: -2px -2px 6px rgb(40 33 26 / 0.18);
+  --peel-under-a: #fffcf5;
+  --peel-under-b: #d9cfbc;
+  --shadow-lift: var(--elev-1);
+  --shadow: var(--elev-2);
+  --shadow-lg: var(--elev-3);
+  --hard-shadow: none;
+  --halftone: rgb(40 33 26 / 0.07);
+  --skeleton-a: #e3dac8;
+  --skeleton-b: #ece5d6;
+  --reader-bg: #f5f0e6;
+  --reader-ink: #28211a;
+  --reader-bar: rgb(245 240 230 / 0.94);
+  --meta-theme: #f5f0e6;
+}
+
+/* System: follow the OS. Dark is the base (:root); this switches to the light values.
+   contrast-check.mjs fails if this block drifts from [data-theme="light"]. */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    color-scheme: light;
+    --bg: #f7f8fc;
+    --bg-raised: #ffffff;
+    --surface: #eef0f6;
+    --surface-2: #e4e7ef;
+    --surface-3: #d7dbe5;
+    --line: rgb(23 25 35 / 0.1);
+    --line-strong: rgb(23 25 35 / 0.2);
+    --line-ui: #767c8c;
+    --ink: #171923;
+    --ink-2: #3a3f4e;
+    --ink-3: #555b6c;
+    --ink-4: #9499a6;
+    --frame: #171923;
+    --accent: var(--acc-lt-fill);
+    --accent-hover: var(--acc-lt-hover);
+    --accent-ink: var(--acc-lt-ink);
+    --accent-soft: var(--acc-lt-soft);
+    --accent-text: var(--acc-lt-text);
+    --new: var(--lime);
+    --new-ink: var(--on-bright);
+    --new-text: #3b6300;
+    --hot: var(--vermilion);
+    --hot-ink: var(--on-bright);
+    --hot-text: #b0261a;
+    --lime-text: #3b6300;
+    --lime-soft: rgb(120 180 20 / 0.16);
+    --lavender-text: #5d43c8;
+    --lavender-soft: rgb(184 165 247 / 0.3);
+    --good: #1d6a41;
+    --warn: #7a4f00;
+    --bad: #b3261e;
+    --chip-bg: #e4e7ef;
+    --chip-ink: #3a3f4e;
+    --scrim: rgb(23 25 35 / 0.5);
+    --header-bg: rgb(247 248 252 / 0.9);
+    --on-art: #ffffff;
+    --art-fade: linear-gradient(180deg, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0.4) 44%, rgb(0 0 0 / 0.8) 64%, rgb(0 0 0 / 0.94) 100%);
+    --art-fade-side: linear-gradient(90deg, rgb(8 8 10 / 0.88) 0%, rgb(8 8 10 / 0.6) 50%, rgb(8 8 10 / 0.2) 100%);
+    --tp-backdrop-fade: linear-gradient(180deg, color-mix(in srgb, var(--bg) 45%, transparent) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 45%, var(--bg) 86%);
+    --elev-1: 0 1px 0 rgb(23 25 35 / 0.05), 0 4px 12px rgb(23 25 35 / 0.08);
+    --elev-2: 0 1px 0 rgb(23 25 35 / 0.05), 0 8px 24px rgb(23 25 35 / 0.1);
+    --elev-3: 0 24px 64px rgb(23 25 35 / 0.18);
+    --shadow-cover: 0 2px 4px rgb(23 25 35 / 0.12), 0 10px 24px -8px rgb(23 25 35 / 0.24);
+    --shadow-peel: -2px -2px 6px rgb(23 25 35 / 0.18);
+    --peel-under-a: #ffffff;
+    --peel-under-b: #d9d6cd;
+    --shadow-lift: var(--elev-1);
+    --shadow: var(--elev-2);
+    --shadow-lg: var(--elev-3);
+    --hard-shadow: none;
+    --halftone: rgb(23 25 35 / 0.07);
+    --skeleton-a: #e4e7ef;
+    --skeleton-b: #eef0f6;
+    --reader-bg: #eef0f6;
+    --reader-ink: #171923;
+    --reader-bar: rgb(247 248 252 / 0.94);
+    --meta-theme: #f7f8fc;
   }
 }
 
+/* Reduced motion: fades collapse to instant. (Travel tokens are already 0 globally.) */
 [data-reduce-motion] {
+  --dur-fast: 0ms;
+  --dur: 0ms;
+  --dur-slow: 0ms;
+  --dur-slide: 0ms;
+  --dur-enter: 0ms;
+  --dur-ring: 0ms;
   --dur-spring: 0ms;
   --dur-bar-hide: 0ms;
   --dur-bar-show: 0ms;
-  --chapter-rise: 0px;
-  --panel-travel: 0px;
-  --peel-hover: var(--peel);
-  --dur-slide: 0ms;
-  --drift-scale: 1;
-  --lift: 0px;
-  --dur-enter: 0ms;
-  --dur-ring: 0ms;
-  --stagger: 0ms;
-  --rise: 0px;
-  --pop-scale: 1;
 }
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+    --dur-slide: 0ms;
+    --dur-enter: 0ms;
+    --dur-ring: 0ms;
     --dur-spring: 0ms;
     --dur-bar-hide: 0ms;
     --dur-bar-show: 0ms;
-    --chapter-rise: 0px;
-    --panel-travel: 0px;
-    --peel-hover: var(--peel);
-    --dur-slide: 0ms;
-    --drift-scale: 1;
-    --lift: 0px;
-    --dur-enter: 0ms;
-    --dur-ring: 0ms;
-    --stagger: 0ms;
-    --rise: 0px;
-    --pop-scale: 1;
   }
 }
 
@@ -246,6 +581,7 @@
   --color-text-secondary: var(--ink-2);
   --color-text-muted: var(--ink-3);
   --color-border: var(--line);
+  --color-border-ui: var(--line-ui);
   --color-action-primary: var(--accent);
   --color-action-secondary: var(--lavender);
   --color-success: var(--good);
@@ -254,14 +590,12 @@
   --color-focus: var(--accent-text);
   --color-disabled: var(--ink-4);
 
-  /* rewards: existing accents only. Lime = earned / XP (action family), lavender = mascot and quests, vermilion = new. */
   --reward-xp: var(--accent);
   --reward-xp-text: var(--accent-text);
   --reward-quest: var(--lavender);
   --reward-quest-text: var(--lavender-text);
-  --reward-new: var(--hot);
+  --reward-new: var(--new);
   --ring-track: var(--surface-3);
-  /* achievement tiers I / II / III */
   --tier-1: var(--ink-3);
   --tier-2: var(--lavender);
   --tier-3: var(--lime);

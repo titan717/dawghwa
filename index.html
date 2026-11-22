@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Free manhwa and manga reader in your browser · Dawghwa</title>
     <meta name="description" content="Read manhwa, manga and manhua in one long scroll. Free, no account, and recommendations learned on your device. Use it in a browser or install it." />
-    <meta name="theme-color" content="#151519" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#F5F0E7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B0D12" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F7F8FC" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -24,8 +24,8 @@
       (function () {
         try {
           var s = JSON.parse(localStorage.getItem("dawghwa:settings") || "{}");
-          // Dark-first: dark unless the reader chose light, or chose to follow the system.
-          var t = s.theme === "light" ? "light" : s.theme === "system" && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+          // Dark-first: dark unless the reader chose another theme, or chose to follow the system.
+          var t = s.theme === "light" || s.theme === "amoled" || s.theme === "sepia" ? s.theme : s.theme === "system" && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
           document.documentElement.dataset.theme = t;
         } catch (e) {}
       })();
