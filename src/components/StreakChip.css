@@ -1,0 +1,55 @@
+/* StreakChip: neutral greys only (green is for actions and selected state). */
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.streak-chip-freeze {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-2);
+}
+.streak-chip-link {
+  min-height: 44px;
+  min-width: 44px;
+  transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.streak-chip-link:hover {
+  background: var(--surface-3);
+}
+.streak-chip-link:active {
+  transform: scale(0.97);
+}
+.streak-chip-link:focus-visible {
+  outline: 2px solid var(--frame);
+  outline-offset: 2px;
+}
+[data-reduce-motion] .streak-chip-link {
+  transition: none;
+}
+[data-reduce-motion] .streak-chip-link:active {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak-chip-link {
+    transition: none;
+  }
+  .streak-chip-link:active {
+    transform: none;
+  }
+}
+
+/* Achievements streak block */
+.streak-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-3); }
+.rhythm-week li[data-frozen] .rhythm-dot { display: grid; place-items: center; border: 2px solid var(--ink-3); color: var(--ink-2); }

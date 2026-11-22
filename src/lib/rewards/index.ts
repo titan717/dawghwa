@@ -2,9 +2,12 @@ import { useMemo } from "react";
 import { allCollections, useUser, type UserState } from "../store/user";
 import { XP, achievementSets, ledger, levelFor, passport, type AchievementSet, type Ledger, type Level, type Stamp, type XpEntry } from "./progression";
 import { questBook, questSeedOf, type QuestBook } from "./quests";
+import { earns, streakView, type Streak } from "./streak";
+import { useSettings } from "../settings";
 
 export * from "./progression";
 export { questBook, weekStart, isoWeek, type Quest, type QuestBook } from "./quests";
+export { streak, streakView, streakLabel, meaningfulDays, earns, MEANINGFUL_SECONDS, READ_TIME, INCOGNITO, type Streak } from "./streak";
 
 export interface Progression {
   ledger: Ledger;
@@ -23,7 +26,9 @@ export function registerProgressionInput(fn: Extra) {
   return () => extras.delete(fn);
 }
 
-export function progressionFor(s: UserState, events = s.events, now = Date.now()): Progression {
+export function progressionFor(s: UserState, all = s.events, now = Date.now()): Progression {
+  // Incognito never earns: not XP, quests, badges or stamps.
+  const events = all.filter(earns);
   let xp: XpEntry[] = [];
   // Distinct chapters commented on, from the event log: deleting and re-posting can't farm it.
   let comments: number = new Set(events.filter((e) => e.kind === "comment").map((e) => e.context ?? e.titleKey)).size;
@@ -46,4 +51,17 @@ export function useProgression(): Progression {
   const state = useUser((s) => s);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => progressionFor(state), [events, titles, library, version]);
+}
+
+/**
+ * The streak for the StreakChip, or null when there is nothing to show (Rewards
+ * off, Incognito, or no current streak). `incognito` is for the session flag
+ * once Incognito exists; events tagged Incognito are ignored either way.
+ */
+export function useStreak(opts: { incognito?: boolean } = {}): Streak | null {
+  const events = useUser((s) => s.events);
+  const { rewards } = useSettings();
+  const day = new Date().toDateString();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => streakView(events, { rewards, incognito: opts.incognito }), [events, rewards, opts.incognito, day]);
 }
