@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { db, getCachedTitles, kvGet, kvSet } from "../store/db";
+import { isIncognito } from "../store/incognito";
 import { getUser, profileEvents, subscribeUser } from "../store/user";
 import type { Title } from "../titles";
 import { deserialize, serialize, train, type LearnerState, type SerializedState } from "./learner";
@@ -108,7 +109,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let running: Promise<void> | null = null;
 
 export async function retrain(profileId = getUser().profile?.id): Promise<void> {
-  if (!profileId) return;
+  if (!profileId || isIncognito()) return;
   const s = await trainProfile(profileId);
   if (getUser().profile?.id !== profileId) return; // profile switched meanwhile
   current = s;

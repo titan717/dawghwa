@@ -17,6 +17,8 @@ import { useHead } from "@/lib/seo";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { createProfile, deleteProfile, switchProfile, unhideTitle, updateProfile, useUser } from "@/lib/store/user";
 import { isMemoryStorage } from "@/lib/store/db";
+import { setIncognito, useIncognito } from "@/lib/store/incognito";
+import { IncognitoNotice, INCOGNITO_COPY } from "@/components/IncognitoNotice";
 import { downloadJson, exportProfile, importProfile } from "@/lib/store/transfer";
 import { resetIntel, useIntel } from "@/lib/intel/runtime";
 import { evidence } from "@/lib/intel/learner";
@@ -329,6 +331,25 @@ function RewardsSummary() {
   );
 }
 
+/** One-tap Incognito for this session. The flag is memory-only: closing or reloading the app turns it off. */
+function IncognitoToggle() {
+  const on = useIncognito();
+  return (
+    <section className="settings-group" aria-labelledby="incognito-h">
+      <h2 id="incognito-h">Incognito</h2>
+      <label className="switch settings-row">
+        <span>
+          <span className="label">Read in Incognito</span>
+          <span className="hint" id="incognito-hint">
+            {INCOGNITO_COPY} Ends when you turn it off or close the app.
+          </span>
+        </span>
+        <input type="checkbox" aria-describedby="incognito-hint" checked={on} onChange={(e) => setIncognito(e.target.checked)} />
+      </label>
+    </section>
+  );
+}
+
 export default function Profile() {
   const profile = useUser((s) => s.profile);
   const profiles = useUser((s) => s.profiles);
@@ -348,6 +369,7 @@ export default function Profile() {
   const hasReading = stats.chaptersRead > 0 || stats.completed > 0 || stats.favourites > 0;
   return (
     <div className="page page-narrow profile-page">
+      <IncognitoNotice showTurnOff={false} />
       <header className="profile-hero">
         <ProfileAvatar profile={profile} size={80} />
         <div style={{ minWidth: 0 }}>
@@ -408,6 +430,7 @@ export default function Profile() {
           )}
         </>
       )}
+      <IncognitoToggle />
       {settings.rewards && <RewardsSummary />}
 
       <h2 className="settings-title" id="settings">
