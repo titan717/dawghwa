@@ -10,6 +10,13 @@ html {
   background: var(--bg);
   /* keyboard focus and in-page anchors land below the sticky header, never under it */
   scroll-padding-top: calc(var(--topbar-h) + var(--space-2));
+  /* browser-drawn parts carry the palette too */
+  accent-color: var(--accent);
+  scrollbar-color: var(--surface-3) transparent;
+}
+input,
+textarea {
+  caret-color: var(--accent-text);
 }
 body {
   margin: 0;

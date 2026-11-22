@@ -1,5 +1,7 @@
 # Dawghwa design system
 
+> Phase 2 tokens, themes, accents, density, motion, header and card specs now live in [DESIGN.md](DESIGN.md). Where the two disagree (colours, motion, 5:7 covers), DESIGN.md wins; this page remains the component inventory.
+
 The blueprint (WEBTOON-style screens, see `docs/DAWGHWA_AUDIT.md`) sets the structure. The identity is the selected directions B and C. B is the editorial grid: Archivo display type, numbered section heads, hard ink frames and stickers. C is the mascot-led warmth: the beagle reader, lime as the action colour, lavender and vermilion as secondary accents. The source of truth is `src/styles/tokens.css`. This page explains the tokens and the rules for using them.
 
 ## Principles
