@@ -8,7 +8,7 @@ A practical map of the product, its design, and the codebase. Start with the gui
 | --- | --- |
 | Understand the app and its boundaries | [Architecture](ARCHITECTURE.md) |
 | Follow a chapter from title page to reader | [Unified reader](UNIFIED_READER.md) |
-| Understand the visual language and interaction rules | [Design system](DAWGHWA_DESIGN_SYSTEM.md) |
+| Understand the visual language and interaction rules | [DESIGN.md](DESIGN.md) (current reference; [older design system notes](DAWGHWA_DESIGN_SYSTEM.md) are history) |
 | See how local recommendations work | [Recommendations](RECOMMENDATIONS.md) |
 
 ## Product and quality
@@ -28,9 +28,11 @@ A practical map of the product, its design, and the codebase. Start with the gui
 - [Research plan](research/plan.md)
 - [Research index](research/README.md)
 - [Decisions log](DECISIONS.md)
+- [Loop state and cycle logs](LOOP_STATE.md)
+- [Release process](RELEASE.md)
 
 ## Source of truth
 
 - The app's current behavior is defined by the code and tests, not by older screenshots or planning notes.
-- The design system describes the intended interface. If it differs from the shipped app, record the discrepancy and update the guide with the relevant change.
+- `DESIGN.md` describes the intended interface. If it differs from the shipped app, record the discrepancy and update the guide with the relevant change.
 - Performance, privacy, and compatibility claims should be backed by an automated check or a reproducible measurement before being described as verified.
