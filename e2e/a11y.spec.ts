@@ -72,7 +72,7 @@ test("rewards off: no quest rings, no level, card without level", async ({ page 
   await page.goto("/profile");
   await page.getByRole("checkbox", { name: /Show rewards/ }).uncheck();
   await page.goto("/");
-  await expect(page.locator(".quest-strip, .card-ring, .continue-ring")).toHaveCount(0);
+  await expect(page.locator(".quest-home, .card-ring, .continue-ring")).toHaveCount(0);
   await page.goto("/profile");
   await expect(page.locator(".level-card")).toHaveCount(0);
 });

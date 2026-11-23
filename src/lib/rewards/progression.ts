@@ -25,7 +25,19 @@ import { earns } from "./streak";
  *  - Events recorded in Incognito earn nothing.
  */
 
-export const XP = { chapter: 10, series: 25, complete: 100, genre: 15, quest: 50 } as const;
+export const XP = { chapter: 10, series: 25, complete: 100, genre: 15, quest: 50, quiz: 30 } as const;
+
+/** Event kind the taste quiz results screen emits once (value = cards answered, not skipped). */
+export const QUIZ_DONE = "quiz_done";
+/** Cards a quiz run needs before it earns the Taste Tester badge and its XP. */
+export const QUIZ_MIN_ANSWERS = 5;
+/**
+ * Cards answered on a quiz_done event: a finite integer 0..100, anything else 0,
+ * so a hand-edited import can't award the badge with a junk value.
+ */
+export function quizAnswers(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 100 ? value : 0;
+}
 
 /** Most XP one local calendar day can add. A big day of new series is about 200. */
 export const DAILY_XP_CAP = 300;
@@ -52,6 +64,10 @@ export interface Ledger {
   genres: Map<string, { name: string; at: number; chapters: number }>;
   /** Distinct local days with at least one finished chapter (all time). */
   activeDays: number;
+  /** First qualifying taste quiz run (Taste Tester), if any. */
+  quizAt?: number;
+  /** Titles favourited outside Incognito (a `favorite` event exists). */
+  favorited?: Set<string>;
 }
 
 const dayKey = (t: number) => {
@@ -68,8 +84,17 @@ export function ledger(events: Iterable<EventRecord>, titles: Map<string, Title>
   const genres = new Map<string, { name: string; at: number; chapters: number }>();
   const days = new Set<string>();
   const entries: XpEntry[] = [];
+  let quizAt: number | undefined;
+  const favorited = new Set<string>();
   for (const e of evs) {
-    if (e.kind === "chapter_read") {
+    if (e.kind === "favorite") favorited.add(e.titleKey);
+    else if (e.kind === QUIZ_DONE) {
+      // Once per profile, ever: the first run with enough answers. Retuning later earns nothing.
+      // Like every reason, quiz XP on a day already at the cap is lost (capDaily below); the badge still counts.
+      if (quizAt !== undefined || quizAnswers(e.value) < QUIZ_MIN_ANSWERS) continue;
+      quizAt = e.at;
+      entries.push({ at: e.at, xp: XP.quiz, reason: "quiz" });
+    } else if (e.kind === "chapter_read") {
       const id = `${e.titleKey}|${e.value ?? "?"}`;
       if (seenChapter.has(id)) continue;
       seenChapter.add(id);
@@ -99,7 +124,7 @@ export function ledger(events: Iterable<EventRecord>, titles: Map<string, Title>
   for (const x of extra) entries.push(x);
   entries.sort((a, b) => a.at - b.at);
   const capped = capDaily(entries);
-  return { entries: capped, total: capped.reduce((s, x) => s + x.xp, 0), chapters: seenChapter.size, series: seenSeries.size, completed: seenComplete.size, genres, activeDays: days.size };
+  return { entries: capped, total: capped.reduce((s, x) => s + x.xp, 0), chapters: seenChapter.size, series: seenSeries.size, completed: seenComplete.size, genres, activeDays: days.size, quizAt, favorited };
 }
 
 /** Applies DAILY_XP_CAP per local day (entries sorted by time). Trimmed-to-zero entries are dropped. */
@@ -217,10 +242,12 @@ export function achievementSets({ ledger: l, library, collections, quests = 0, c
     makeSet("complete", "The end", "Series read to the final chapter", l.completed, [1, 5, 15], ["series", "series"]),
     makeSet("genres", "Wide reader", "Genres you have read a chapter in", l.genres.size, [3, 8, 15], ["genre", "genres"]),
     makeSet("days", "Regular", "Days you finished a chapter (any days, in a row or not)", l.activeDays, [3, 15, 50], ["day", "days"]),
-    makeSet("favourites", "Keeper", "Series in Favourites", lib.filter((r) => r.favorite).length, [1, 10, 30], ["favourite", "favourites"]),
+    // Favourites still save in Incognito (they're bookmarks), but only ones favourited outside it count here.
+    makeSet("favourites", "Keeper", "Series in Favourites", lib.filter((r) => r.favorite && (!l.favorited || l.favorited.has(r.titleKey))).length, [1, 10, 30], ["favourite", "favourites"]),
     makeSet("collections", "Curator", "Collections you made", collections, [1, 3, 6], ["collection", "collections"]),
     makeSet("quests", "Quest hound", "Weekly quests completed", quests, [1, 5, 20], ["quest", "quests"]),
     makeSet("comments", "Margin notes", "Chapters you left a comment on", comments, [1, 10, 50], ["chapter", "chapters"]),
+    makeSet("taste", "Taste Tester", `Finish the taste quiz (${QUIZ_MIN_ANSWERS} or more cards)`, l.quizAt !== undefined ? 1 : 0, [1], ["quiz", "quizzes"]),
   ];
 }
 

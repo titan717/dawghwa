@@ -23,7 +23,7 @@ export function setRewardSink(fn: Sink | null) {
   sink = fn;
 }
 
-const RELEVANT = new Set(["chapter_read", "title_finished", "favorite", "like", "dislike", "not_interested", "surprise_pick", "comment"]);
+const RELEVANT = new Set(["chapter_read", "title_finished", "favorite", "like", "dislike", "not_interested", "surprise_pick", "comment", "quiz_done"]);
 
 export function describe(g: Moment): { kind: "level" | "badge" | "genre" | "series" | "quest" | "cosmetic"; title: string; detail?: string; mascot?: boolean } | null {
   if (g.levelUp) return { kind: "level", title: `Level ${g.levelUp.level} · ${g.levelUp.tier.name}`, detail: g.levelUp.tier.from === g.levelUp.level ? `New mascot accessory: ${g.levelUp.tier.accessory}` : `+${g.xp} XP`, mascot: true };
@@ -31,7 +31,7 @@ export function describe(g: Moment): { kind: "level" | "badge" | "genre" | "seri
   if (g.quests[0]) return { kind: "quest", title: `Quest done: ${g.quests[0].title}`, detail: g.unlocks[0] ? `Unlocked ${g.unlocks[0].name}` : "+50 XP" };
   if (g.unlocks[0]) return { kind: "cosmetic", title: `Unlocked ${g.unlocks[0].name}`, detail: "Wear it from Achievements" };
   const t = g.tiers[0];
-  if (t) return { kind: "badge", title: `${t.set.name} ${["", "I", "II", "III", "IV", "V"][t.tier]}`, detail: t.set.rule };
+  if (t) return { kind: "badge", title: t.set.goals.length > 1 ? `${t.set.name} ${["", "I", "II", "III", "IV", "V"][t.tier]}` : `${t.set.name} badge`, detail: g.xp ? `+${g.xp} XP` : t.set.rule };
   if (g.genres.length) return { kind: "genre", title: `New passport stamp: ${g.genres.join(", ")}`, detail: `+${g.xp} XP` };
   return null;
 }

@@ -103,7 +103,7 @@ describe("achievement sets", () => {
     expect(makeSet("x", "X", "", 12, [1, 10], ["chapter", "chapters"])).toMatchObject({ tier: 2, progress: 1, hint: "All 2 tiers earned" });
   });
   it("derives every set from the ledger and library", () => {
-    const l = ledger([ev("chapter_read", "a", T0, { value: 1 })], titles);
+    const l = ledger([ev("chapter_read", "a", T0, { value: 1 }), ev("favorite", "a", T0)], titles);
     const sets = achievementSets({ ledger: l, library: [{ profileId: "p", titleKey: "a", favorite: true, collections: [], addedAt: 0, updatedAt: 0 }], collections: 2 });
     const by = Object.fromEntries(sets.map((s) => [s.id, s.tier]));
     expect(by).toMatchObject({ chapters: 1, series: 1, complete: 0, favourites: 1, collections: 1, quests: 0 });

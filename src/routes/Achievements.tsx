@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Award, BookOpen, CalendarDays, Compass, Flag, FolderHeart, Heart, Layers, MessageSquare, Snowflake, Sparkles } from "lucide-react";
+import { Award, BookOpen, CalendarDays, Compass, Flag, FolderHeart, Heart, Layers, MessageSquare, Snowflake, Sparkle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { Kicker } from "@/components/Editorial";
 import { EMBLEM_ICON, LevelMascot, TIER_ICON } from "@/components/LevelMascot";
@@ -12,14 +12,14 @@ import { dayKey, meaningfulDays, streak as streakFor } from "@/lib/rewards/strea
 import { weekStart } from "@/lib/rewards/quests";
 import { MascotSays } from "@/components/Mascot";
 import { ProfileSkeleton } from "@/components/States";
-import { DAILY_XP_CAP, TIERS, XP, useProgression, type XpEntry } from "@/lib/rewards";
+import { DAILY_XP_CAP, QUIZ_MIN_ANSWERS, TIERS, XP, useProgression, type XpEntry } from "@/lib/rewards";
 import { updateSettings, useSettings } from "@/lib/settings";
 import { updateProfile, useUser } from "@/lib/store/user";
 import type { EventRecord, ProfileRecord } from "@/lib/store/db";
 import { useHead } from "@/lib/seo";
 import { titlePath } from "@/lib/titles";
 
-const ICONS: Record<string, typeof Award> = { chapters: BookOpen, series: Layers, complete: Sparkles, genres: Compass, days: CalendarDays, favourites: Heart, collections: FolderHeart, quests: Flag, comments: MessageSquare };
+const ICONS: Record<string, typeof Award> = { chapters: BookOpen, series: Layers, complete: Sparkles, genres: Compass, days: CalendarDays, favourites: Heart, collections: FolderHeart, quests: Flag, comments: MessageSquare, taste: Sparkle };
 
 export function RewardsOff() {
   return (
@@ -32,7 +32,7 @@ export function RewardsOff() {
   );
 }
 
-const REASON: Record<XpEntry["reason"], string> = { chapter: "Chapter finished", series: "New series", complete: "Series complete", genre: "New genre", quest: "Weekly quest" };
+const REASON: Record<XpEntry["reason"], string> = { chapter: "Chapter finished", series: "New series", complete: "Series complete", genre: "New genre", quest: "Weekly quest", quiz: "Taste quiz" };
 interface Moment {
   at: number;
   xp: number;
@@ -214,7 +214,7 @@ export default function Achievements() {
         <ul className="badge-grid">
           {sets.map((s) => (
             <li key={s.id}>
-              <Badge icon={ICONS[s.id] ?? Award} name={s.name} tier={s.tier} tiers={s.goals.length} progress={s.progress} hint={s.hint} detail={`${s.rule}: ${s.value}`} />
+              <Badge icon={ICONS[s.id] ?? Award} name={s.name} tier={s.tier} tiers={s.goals.length} progress={s.progress} count={s.goals[s.tier] !== undefined ? `${Math.min(s.value, s.goals[s.tier]!)} of ${s.goals[s.tier]}` : undefined} hint={s.hint} detail={`${s.rule}: ${s.value}`} />
             </li>
           ))}
         </ul>
@@ -267,7 +267,10 @@ export default function Achievements() {
             <b>+{XP.quest}</b> for each weekly quest
           </li>
           <li>
-            Up to <b>{DAILY_XP_CAP}</b> XP a day in total
+            <b>+{XP.quiz}</b> once, the first time you finish the taste quiz ({QUIZ_MIN_ANSWERS} or more cards)
+          </li>
+          <li>
+            Up to <b>{DAILY_XP_CAP}</b> XP a day in total. XP past the cap that day is lost, quiz XP included; badges still count
           </li>
         </ul>
         <p className="muted">Re-reading, opening chapters and marking chapters read by hand do not add XP. XP never expires and is never taken away.</p>

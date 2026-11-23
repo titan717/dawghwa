@@ -111,6 +111,7 @@ describe("streak across a daylight-saving change", () => {
     process.env.TZ = tz;
   });
   it("counts each calendar day once through a 25-hour day", () => {
+    expect(new Date(2026, 0, 1).getTimezoneOffset()).toBe(300); // the zone applied
     const days = [30, 31].map((d) => new Date(2026, 9, d, 23, 30).getTime()).concat([1, 2].map((d) => new Date(2026, 10, d, 0, 30).getTime()));
     const s = streak(days.map((t) => ev("chapter_read", t)), new Date(2026, 10, 2, 22).getTime());
     expect(s.days).toBe(4);
