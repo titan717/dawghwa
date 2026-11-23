@@ -33,3 +33,19 @@ Checked 2026-11-22 by SCOUT (cycle 1) from the agent sandbox. Plain HTTPS GETs, 
 | https://manhuaplus.top/robots.txt | 200 | 2026-11-22T15:42:58Z | a5e90c107f92f83a-IAD | page served |
 | https://manhuaplus.top/ | 200 | 2026-11-22T15:43:00Z | a5e90c1dd903c97e-IAD | page served |
 | https://manhuaplus.top/terms | 200 | 2026-11-22T15:43:03Z | a5e90c2d2f9fd6ed-IAD | page served |
+
+
+## Re-check 2026-11-23 (cycle 0, SCOUT)
+
+Method: one plain GET per URL below from the agent sandbox, user agent `DawghwaBot/1.0 (+https://dawghwa.vercel.app/bot)`, no cookies, no Referer/Origin, redirects not followed, at least 2.5 s between requests to a host, stop at the first 401/403/429 or challenge. Raw responses were inspected locally and not committed.
+
+Gate runs must use the identifying `DawghwaBot/1.0 (+https://dawghwa.vercel.app/bot)` user agent with no Referer or Origin spoofing. JUDGE found that the API currently sends a Chrome browser UA by default (`src/lib/core/config.ts`, `UPSTREAM_USER_AGENT` fallback), a provider Referer, and a forged Origin for one provider (`src/lib/services/page-image.ts`). Any earlier access that relied on those headers, including last cycle's checks, which used a fixed browser UA, does not count for gate 4.
+
+- Findings: robots.txt unchanged (`Allow: /`, `Disallow: /panel/`). Terms still limit use to personal non-commercial use and forbid automated systems, explicitly naming robots, spiders and offline readers, that send more requests than a human reasonably could.
+- Gate verdict: **FAIL (gate 1 terms, unchanged)**. Flag `PROVIDER_*` stays OFF.
+- Downloadable (gate 9, `offlineAllowed`): **false (terms name offline readers as prohibited)**.
+
+| URL | HTTP | Time (UTC) | cf-ray | Result |
+|---|---|---|---|---|
+| https://manhuaplus.top/robots.txt | 200 | 2026-11-23T15:45:09Z | a5f14ca08efa602b-ATL | page served |
+| https://manhuaplus.top/terms | 200 | 2026-11-23T15:45:12Z | a5f14cb36fb26de9-DFW | page served |

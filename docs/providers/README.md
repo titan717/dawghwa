@@ -1,4 +1,47 @@
-# Provider gates — cycle 1 (2026-11-22)
+# Provider gates
+
+Internal only. Never ship provider names to users. The deny-list for leak tests is [_names.json](_names.json). Keep it in sync with `src/lib/providers/manifest.generated.ts` in the API repo.
+
+## Cycle 0 re-check (2026-11-23, SCOUT)
+
+Gate numbers in this section follow MASTER_PROMPT section 11: 1 terms · 2 robots · 3 rights · 4 access without circumvention · 5 rate · 6 quality (12 titles) · 7 reliability · 8 hidden-source · 9 offline. The 2026-11-22 tables further down use the older numbering.
+
+Method: light check only. One GET per robots.txt, plus the terms page where one was known. 28 requests in total across 19 hosts, at least 2.5 s apart per host. User agent `DawghwaBot/1.0 (+https://dawghwa.vercel.app/bot)`, no Referer or Origin, redirects not followed, stop on 401/403/429/challenge. MangaDex and the two open-licence candidates were also read through public docs and a fetch service. No title or chapter pages were fetched.
+
+**Header rule (JUDGE, 2026-11-23):** the API sends a Chrome browser UA by default (`src/lib/core/config.ts`), a provider Referer, and a forged Origin for one provider (`src/lib/services/page-image.ts`). Access that depends on those headers does not count for gate 4. Gate runs must use the identifying bot UA and no Referer/Origin spoofing. MangaDex's own rules also require an unspoofed UA.
+
+**Attribution conflict (for the owner):** if a provider's terms require attribution or forbid hiding the source, they conflict with Dawghwa's locked hidden-source rule, and the verdict is FAIL. This applies to MangaDex, Say Hello to Black Jack and Pepper&Carrot, the only sources found that grant explicit permission. Only the owner can change that rule.
+
+| Provider / candidate | Gate 1 terms | Gate 2 robots (2026-11-23) | Gate 4 access (bot UA) | Verdict | Downloadable |
+|---|---|---|---|---|---|
+| [mangadex](mangadex.md) | FAIL: API policy requires credit to MangaDex and scanlation groups, and no ads; ToS bans bots and offline readers on the Site | main site disallows `/api`, `/terms`; api host not fetched | pass (no challenge today) | **FAIL (attribution conflict)** | false |
+| [Say Hello to Black Jack](say-hello-to-black-jack.md) (author-licensed, self-hosted) | FAIL: free reuse, but the title, author and site name must be shown | n/a | n/a | **FAIL (attribution conflict)** | true if ever enabled |
+| [Pepper&Carrot](pepper-and-carrot.md) (CC BY 4.0) | FAIL: credit and licence link required; not manga | n/a | n/a | **FAIL (attribution conflict)** | true if ever enabled |
+| [mangakatana](mangakatana.md) | FAIL: no terms | pass | pass | FAIL | false |
+| [manhuaplus](manhuaplus.md) | FAIL: personal non-commercial only; bans robots and offline readers | pass | pass | FAIL | false |
+| [asurascan](asurascan.md) | FAIL: bans scraping, bots | `/api/` disallowed (not used) | pass | FAIL | false |
+| [webtoon](webtoon.md) | FAIL: bans crawling/scraping; offline only inside the official app | FAIL `/*/search` | pass | FAIL | false |
+| [weebcentral](weebcentral.md) | unverified | `Crawl-delay: 10` | robots 200; homepage 403 on 2026-11-22 | FAIL | false |
+| [flamecomics](flamecomics.md) | unverified | FAIL `/api/` used by the adapter | robots 200 | FAIL | false |
+| [comix (comix.to)](comix-to.md) | unverified | unreadable | **403**, stopped | blocked | false |
+| [comix.ws](comix-ws.md) | unreadable (403 on 2026-11-22) | allow, ai-train=no | robots 200 | blocked | false |
+| [Lux Manga](lux-manga.md) | FAIL: no terms | pass | pass | FAIL | false |
+| [Eva Scans](eva-scans.md) | FAIL: terms name another site, no operator | pass | pass | FAIL | false |
+| [Violet Scans](violet-scans.md) | FAIL: bans crawling/scraping | pass | pass | FAIL | false |
+| [EZManga](ezmanga.md) | unverified | pass (now readable) | robots 200 (403 on 2026-11-22 with a browser UA) | FAIL | false |
+| [RinkoComics](rinkocomics.md) | FAIL: bans bots, saving pages | pass | pass | FAIL | false |
+| [MagusManga](magusmanga.md) | unverified | `/api/*` disallowed | robots 200; homepage challenge on 2026-11-22 | FAIL | false |
+| [Thunderscans](thunderscans.md) | FAIL: bans crawling/scraping | pass | pass | FAIL | false |
+| [Nyx Scans](nyx-scans.md) | FAIL: no terms | `/api/*` disallowed | pass | FAIL | false |
+| [DivaScans](divascans.md) | FAIL: bans automated download/scrape | `/api/` disallowed | pass | FAIL | false |
+
+**Result: 0 of 20 pass. Every `PROVIDER_*` flag stays OFF, and every `downloadable` is false.** Gates 6 to 8 were not run, because each candidate fails gate 1 first. The cycle 1 gate runner (WEAVER) is still to run once something can pass gate 1.
+
+Licensed platforms: Webtoon (above) forbids third-party automated use. Other official platforms (for example MANGA Plus, K MANGA, Tapas) were not checked this cycle. I know of no public API from them that licenses re-serving content in a third-party app, but that is unverified. The realistic legal routes are an owner-negotiated licence, or self-hosting author-licensed works with credit, which needs an owner exception to the hidden-source rule.
+
+---
+
+## Earlier record: provider gates, cycle 1 (2026-11-22)
 
 Author: SCOUT (provider researcher). Checks ran 2026-11-22 15:42–15:44 UTC from the agent sandbox. Each host got a few plain GETs (robots.txt, the homepage to find legal links, and terms/DMCA), at least 1.5 s apart, with one fixed browser user agent. A host was stopped at its first 403 or challenge, with no retries, mirrors, caches, proxies or browser. No title or chapter pages were fetched in this cycle. No adapter code or config was touched.
 
