@@ -1,0 +1,98 @@
+name: Release Android APK
+
+# Builds the Capacitor Android app and attaches the APK to a GitHub Release.
+# Trigger: push a tag like v0.3.0, or run manually with a tag name.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.3.0). Created on the selected ref if it does not exist."
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+      - name: Validate inputs
+        env:
+          API_URL: ${{ vars.DAWGHWA_API_URL }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::Tag must look like v1.2.3 (got '$TAG')"; exit 1
+          fi
+          if [ -z "$API_URL" ]; then
+            echo "::error::Repository variable DAWGHWA_API_URL is empty; the APK would have no API."; exit 1
+          fi
+      - run: npm ci
+      - name: Web build + Capacitor sync
+        env:
+          VITE_API_BASE_URL: ${{ vars.DAWGHWA_API_URL }}
+        run: npm run android:sync
+      - name: Decode release keystore (optional)
+        id: ks
+        env:
+          KEYSTORE_B64: ${{ secrets.DAWGHWA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+            echo "signed=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=0" >> "$GITHUB_OUTPUT"
+            echo "::warning::No release keystore secret; publishing a debug-signed APK."
+          fi
+      - name: Gradle build
+        working-directory: android
+        env:
+          DAWGHWA_KEYSTORE_PATH: ${{ steps.ks.outputs.path }}
+          DAWGHWA_KEYSTORE_PASSWORD: ${{ secrets.DAWGHWA_KEYSTORE_PASSWORD }}
+          DAWGHWA_KEY_ALIAS: ${{ secrets.DAWGHWA_KEY_ALIAS }}
+          DAWGHWA_KEY_PASSWORD: ${{ secrets.DAWGHWA_KEY_PASSWORD }}
+        run: |
+          VERSION_NAME="${TAG#v}"
+          ARGS="-PversionCode=${{ github.run_number }} -PversionName=$VERSION_NAME"
+          if [ "${{ steps.ks.outputs.signed }}" = "1" ]; then
+            ./gradlew assembleRelease $ARGS
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/dawghwa.apk"
+          else
+            ./gradlew assembleDebug $ARGS
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/dawghwa.apk"
+          fi
+          (cd "$RUNNER_TEMP" && sha256sum dawghwa.apk > dawghwa.apk.sha256)
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTE="Android APK for Dawghwa ${TAG}. Install by allowing installs from your browser, then open dawghwa.apk."
+          if [ "${{ steps.ks.outputs.signed }}" != "1" ]; then
+            NOTE="$NOTE This build is debug-signed with a per-build key, so Android will refuse to update over an older Dawghwa APK. Before installing a new version, export your profiles (Profile > Export), uninstall the old app, install this one, then import them."
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/dawghwa.apk" "$RUNNER_TEMP/dawghwa.apk.sha256" --clobber
+          else
+            gh release create "$TAG" "$RUNNER_TEMP/dawghwa.apk" "$RUNNER_TEMP/dawghwa.apk.sha256" \
+              --target "${{ github.sha }}" --title "Dawghwa ${TAG}" --notes "$NOTE" --latest
+          fi
