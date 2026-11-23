@@ -87,7 +87,16 @@ Purple is never used for format labels, section accents, avatars or chips outsid
 
 ### Other
 
-- `--good`, `--warn`, `--bad`: status messages only.
+- `--good`, `--warn`, `--bad`: status messages only. They are text-safe in both themes (see 4.5), so use them directly for danger labels; never as fills.
+- `--control-line` (dark `#7a7a7a`, light `#767676`): boundary for fields, switch-off tracks, slider and ring tracks. `--surface-3` alone is 1.81:1 (dark) / 1.18:1 (light) against the page and fails WCAG 1.4.11.
+
+### 4.5 Verified pairs
+
+`node scripts/qa/contrast-pairs.mjs` checks 67 token pairs and exits non-zero on an unexpected failure; the full table is in `docs/design/specs/README.md`. Known failures the specs route around:
+- Dark `--ink-3` on `--surface-3` (3.69:1): placeholders in fields use `--ink-2` (6.35:1).
+- Light `--accent` fill on white (1.53:1): green states always carry a check icon, text or position cue; green strokes and bars in light use `--accent-text` (5.98:1).
+- Light `--lavender` as text (3.40:1) and white on `--lavender` (3.40:1): use `--lavender-text`, and `#000` on lavender fills (6.17:1).
+- New tokens (radius alias, control line, scrims, incognito tint, sepia, motion travel) are listed in `docs/design/specs/README.md`.
 - Avatars use neutral surfaces with the initial in `--ink`, or the profile's chosen cosmetic frame. No arbitrary orange/red discs.
 - Art overlays: `--art-fade` (phone hero) and `--art-fade-side` (desktop hero); copy over key art is checked by `scripts/qa/hero-contrast.mjs`.
 
@@ -149,7 +158,7 @@ Five working sizes:
 
 - Durations: `--dur-fast` 120ms (press), `--dur` 200ms (fades), `--dur-slow` 320ms (sheets). Ease `--ease-out`. No bounce on routine UI; `--ease-spring*` only in the reader and reward beat.
 - Fades are opacity (plus at most 8px travel). Hero ken-burns (`--dur-drift`) is the only ambient motion.
-- Reduced motion: `reducedMotion()` in `src/lib/settings.ts` sets `[data-reduce-motion]`, and `prefers-reduced-motion` applies the same zeroing in `tokens.css`. Any new duration, travel or scale must be added to both zeroing blocks.
+- Reduced motion: `reducedMotion()` in `src/lib/settings.ts` sets `[data-reduce-motion]`, and `prefers-reduced-motion` applies the same zeroing in `tokens.css`. Any new duration, travel or scale must be added to both zeroing blocks. Cycle 1 adds `--sheet-travel`, `--toast-travel`, `--page-travel`, `--swipe-fly` (zeroed) and `--tilt-max-x` 6deg / `--tilt-max-y` 8deg (zeroed to 0deg). Tilt runs only on `(hover: hover) and (pointer: fine)`.
 
 ## 12. Loading, empty, error
 
@@ -173,3 +182,7 @@ Five working sizes:
 ## 15. Reference structure (not branding)
 
 The screen structure is inspired by mainstream webtoon and manga reading apps: Home = key-art hero + stacked cover rails; Discover = genre/format entry points leading to grids; Search = trending covers + categories; My Series = tabs over a 2-up cover grid; Profile = settings list. We do not copy their logos, colours, illustrations, iconography, copy, markup or CSS.
+
+## 16. Component specs
+
+Cycle 1 component specs live in `docs/design/specs/` (index and shared rules in its README): hero, bottom sheet, toast, swipe cards, reader controls, settings, share sheet, profile, comment composer, and empty/loading/error/offline/partial states. Research: `docs/research/motion-and-a11y.md`.
