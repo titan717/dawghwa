@@ -23,12 +23,12 @@ Baseline release for the current production build: everything merged since 0.2.0
 - Mascot onboarding, local sign-in with an optional PIN, monthly recap and reader card ([#17](https://github.com/titan717/dawghwa/pull/17)).
 - Motion and polish for discovery surfaces ([#19](https://github.com/titan717/dawghwa/pull/19)) and the title page ([#21](https://github.com/titan717/dawghwa/pull/21)).
 - Android APK release workflow ([#31](https://github.com/titan717/dawghwa/pull/31)).
-- Changelog, release note categories (`.github/release.yml`) and the release process in `docs/RELEASE.md` ([#45](https://github.com/titan717/dawghwa/pull/45)).
+- Changelog, release note categories (`.github/release.yml`) and the release process in `docs/RELEASE.md` ([#52](https://github.com/titan717/dawghwa/pull/52)).
 
 ### Changed
 - Discovery and history show generic loading, empty, error and partial-failure states, with no backend details in the copy ([#39](https://github.com/titan717/dawghwa/pull/39), shipped in [#41](https://github.com/titan717/dawghwa/pull/41)).
 - Simple browse and search requests no longer fetch the filter vocabulary they do not use ([#51](https://github.com/titan717/dawghwa/pull/51), from [#30](https://github.com/titan717/dawghwa/pull/30)).
-- The Android release workflow attaches an APK only when release signing keys are configured, and marks pre-release tags as pre-releases ([#45](https://github.com/titan717/dawghwa/pull/45)).
+- The Android release workflow attaches an APK only when release signing keys are configured, and marks pre-release tags as pre-releases ([#52](https://github.com/titan717/dawghwa/pull/52)).
 
 ### Fixed
 - Home hero skeleton has valid loading semantics for screen readers ([#23](https://github.com/titan717/dawghwa/pull/23)).
