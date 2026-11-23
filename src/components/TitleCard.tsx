@@ -1,11 +1,13 @@
 import { memo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MoreHorizontal, Star } from "lucide-react";
+import { MoreHorizontal, Star, X } from "lucide-react";
 import { prefetchTitle } from "@/lib/query";
 import { kindLabel, titlePath, type Title, isMature } from "@/lib/titles";
 import { Cover } from "./Cover";
 import { TitleActionsSheet } from "./TitleActions";
-import { useUser } from "@/lib/store/user";
+import { hideTitle, unhideTitle, useUser } from "@/lib/store/user";
+import { toast } from "./Toast";
+import "@/styles/search-library.css";
 
 export interface CardProps {
   title: Title;
@@ -21,6 +23,17 @@ export interface CardProps {
   badge?: string;
   /** Search query: matched words in the title are wrapped in <mark>. */
   highlight?: string;
+  /**
+   * Personal-pick rows only: a visible "Not for me" button (LENS B7). Uses the existing
+   * not_interested hide (no new signal); the row drops the card because rows filter hidden titles.
+   */
+  notForMe?: boolean;
+}
+
+/** "Not for me": the same action as Not interested in the long-press sheet, with an 8s Undo. */
+export async function dismissTitle(t: Title) {
+  await hideTitle(t, "not_interested");
+  toast("Got it. You'll see fewer like this.", { label: "Undo", run: () => void unhideTitle(t.key) }, 8000);
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -73,7 +86,7 @@ function useLongPress(onLong: () => void) {
   };
 }
 
-export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card", sub, badge, highlight }: CardProps) {
+export const TitleCard = memo(function TitleCard({ title: t, reason, rank, context, eager, progress, variant = "card", sub, badge, highlight, notForMe }: CardProps) {
   const [menu, setMenu] = useState(false);
   // 2 = every known chapter read, 1 = started and newer chapters exist (real local progress only)
   const readState = useUser((s) => {
@@ -112,7 +125,7 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
       </div>
     );
   return (
-    <div className="card">
+    <div className="card" data-dismissible={notForMe || undefined}>
       <button className="card-menu" aria-label={`Options for ${t.title}`} aria-haspopup="dialog" aria-expanded={menu} onClick={() => setMenu(true)}>
         <MoreHorizontal size={18} />
       </button>
@@ -126,6 +139,11 @@ export const TitleCard = memo(function TitleCard({ title: t, reason, rank, conte
         )}
         <span className="card-title"><Highlight text={t.title} query={highlight} /></span>
       </Link>
+      {notForMe && (
+        <button className="card-dismiss" aria-label={`Not for me: ${t.title}`} onClick={() => void dismissTitle(t)}>
+          <X size={16} strokeWidth={2.4} aria-hidden="true" />
+        </button>
+      )}
       {line && (
         <span className="card-reason" data-done={readState === 2 || undefined}>
           {line}

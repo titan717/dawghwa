@@ -5,12 +5,12 @@ import { errorText } from "./States";
 
 /**
  * Generic result-list failure for search and discovery. Never shows the underlying
- * error text (it can describe the backend); only offline vs. "couldn't load".
+ * error text (it can describe the backend); only offline vs. "something went wrong".
  */
-export function ResultsError({ error, retry, compact }: { error: unknown; retry?: () => void; compact?: boolean }) {
-  const offline = errorText(error).offline;
-  const title = offline ? "You're offline" : "Couldn't load results";
-  const body = offline ? "Reconnect to search. Your library and history are still here." : "Try again in a moment.";
+export function ResultsError({ error, retry, compact, offline: forceOffline, offlineBody }: { error: unknown; retry?: () => void; compact?: boolean; offline?: boolean; offlineBody?: string }) {
+  const offline = forceOffline ?? errorText(error).offline;
+  const title = offline ? "You're offline" : "Something went wrong";
+  const body = offline ? (offlineBody ?? "Reconnect to search. Your library and history are still here.") : "Check your connection and try again.";
   if (compact)
     return (
       <div className="inline-state" role="alert">
@@ -26,7 +26,7 @@ export function ResultsError({ error, retry, compact }: { error: unknown; retry?
       </div>
     );
   return (
-    <div className="state" role="alert">
+    <div className="state state-center" role="alert">
       <Mascot pose={offline ? "offline" : "error"} />
       <h2>{title}</h2>
       <p>{body}</p>

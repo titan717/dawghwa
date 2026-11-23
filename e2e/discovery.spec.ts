@@ -127,7 +127,7 @@ test("search: error shows a generic message with retry, never backend text", asy
   await skipOnboarding(page);
   await page.route(catalogPath, (r) => r.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { code: "UPSTREAM_BLOCKED", message: "Alpha Mock Scans blocked" } }) }));
   await page.goto("/search?q=zzqq%20nothing");
-  await expect(page.getByRole("heading", { name: "Couldn't load results" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Something went wrong" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.locator("main, body").first()).not.toContainText(/source|Alpha Mock/i);
 });
@@ -136,7 +136,7 @@ test("search: empty results with filters offer to clear them", async ({ page }) 
   await skipOnboarding(page);
   await page.route(catalogPath, (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify(emptyCatalog) }));
   await page.goto("/search?q=zzqq&kind=manhwa");
-  await expect(page.getByText(/Nothing found for "zzqq"/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "No matches" })).toBeVisible({ timeout: 20_000 });
   await page.locator(".state").getByRole("button", { name: "Clear filters" }).click();
   await expect(page).not.toHaveURL(/kind=/);
 });
@@ -165,7 +165,7 @@ test("discover: catalogue error is generic with retry, and no provider is named"
   await skipOnboarding(page);
   await page.route(catalogPath, (r) => r.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { code: "SOURCE_UNAVAILABLE", message: "x" } }) }));
   await page.goto("/discover?view=all");
-  await expect(page.getByRole("heading", { name: "Couldn't load results" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Something went wrong" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/mangadex|source/i);
 });

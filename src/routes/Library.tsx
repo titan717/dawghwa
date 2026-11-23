@@ -1,16 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import "@/styles/search-library.css";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, History, LayoutGrid, List, RotateCw, Search as SearchIcon, X } from "lucide-react";
 import { TitleGrid } from "@/components/Grid";
 import { Cover } from "@/components/Cover";
 import { EmptyState, ListSkeleton } from "@/components/States";
+import { ScrollFade } from "@/components/ScrollFade";
+import { flag } from "@/lib/flags";
+import { useDownloadedTitles } from "@/lib/library/downloaded";
+import { getCachedTitles } from "@/lib/store/db";
 import { useHead } from "@/lib/seo";
 import { allCollections, useUser } from "@/lib/store/user";
 import type { LibraryRecord, LibraryStatus, ProgressRecord } from "@/lib/store/db";
 import { kindLabel, readerPath, titlePath, type Title, isMature } from "@/lib/titles";
 import { STATUS_LABELS } from "./TitlePage";
 
-type Tab = LibraryStatus | "recent" | "all" | "favorites" | `c:${string}`;
+type Tab = LibraryStatus | "recent" | "all" | "favorites" | "downloaded" | `c:${string}`;
 type Scope = "all" | "unread";
 type View = "grid" | "list";
 const SORTS = { updated: "Recently Updated", added: "Date Added", title: "Title A-Z", progress: "Most Read" } as const;
@@ -37,11 +42,11 @@ function lastRead(ts: number) {
 }
 
 /** Blueprint "My Series" row: cover flush left, title, chapter, last read, and a two-line action. */
-function LibraryRow({ t, r, p }: { t: Title; r?: LibraryRecord; p?: ProgressRecord }) {
+function LibraryRow({ t, r, p, note }: { t: Title; r?: LibraryRecord; p?: ProgressRecord; note?: string }) {
   const prog = seriesProgress(t, p);
   const resume = p?.pageCount ? readerPath(t, p.chapterId, p.page || undefined) : undefined;
   const fresh = Boolean(p?.maxReadNumber && t.latestChapter && t.latestChapter > p.maxReadNumber);
-  const meta = p ? (prog?.label ?? `Ch. ${p.chapterNumber}`) : [r?.status ? STATUS_LABELS[r.status] : undefined, kindLabel(t.meta?.kind), t.latestChapter ? `${t.latestChapter} chapters` : undefined].filter(Boolean).join(" · ");
+  const meta = note ? note : p ? (prog?.label ?? `Ch. ${p.chapterNumber}`) : [r?.status ? STATUS_LABELS[r.status] : undefined, kindLabel(t.meta?.kind), t.latestChapter ? `${t.latestChapter} chapters` : undefined].filter(Boolean).join(" · ");
   return (
     <li className="lib-row">
       <Link to={titlePath(t)} className="lib-row-main">
@@ -60,12 +65,12 @@ function LibraryRow({ t, r, p }: { t: Title; r?: LibraryRecord; p?: ProgressReco
       </Link>
       {resume ? (
         <Link className="lib-go" to={resume} aria-label={`Continue reading ${t.title}, chapter ${p!.chapterNumber}`}>
-          Continue
+          Continue{" "}
           <small>Reading</small>
         </Link>
       ) : (
-        <Link className="lib-go" to={titlePath(t)} aria-label={`Open ${t.title}`}>
-          View
+        <Link className="lib-go" to={titlePath(t)} aria-label={`View series: ${t.title}`}>
+          View{" "}
           <small>Series</small>
         </Link>
       )}
@@ -81,7 +86,18 @@ export default function Library() {
   const titles = useUser((s) => s.titles);
   const progress = useUser((s) => s.progress);
   const state = useUser((s) => s);
-  const tab = (params.get("tab") as Tab) || "all";
+  const offline = flag("FEATURE_OFFLINE");
+  const rawTab = (params.get("tab") as Tab) || "all";
+  // the Downloaded tab exists only with FEATURE_OFFLINE; an old link falls back to Saved
+  const tab: Tab = rawTab === "downloaded" && !offline ? "all" : rawTab;
+  const profileId = useUser((s) => s.profile?.id);
+  const downloads = useDownloadedTitles(profileId, offline);
+  const [dlTitles, setDlTitles] = useState<Map<string, Title>>(new Map());
+  // downloaded titles may not be in the store's title map (never saved or opened on this profile): read the shared cache
+  useEffect(() => {
+    const missing = [...downloads.titles.keys()].filter((k) => !titles.has(k) && !dlTitles.has(k));
+    if (missing.length) void getCachedTitles(missing).then((m) => m.size && setDlTitles((prev) => new Map([...prev, ...m])));
+  }, [downloads.titles, titles]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sort, setSort] = useState<keyof typeof SORTS>("updated");
   const [find, setFind] = useState("");
   // blueprint "My Series" is a list; the cover grid stays one tap away
@@ -104,31 +120,41 @@ export default function Library() {
         .filter((x): x is { r: LibraryRecord | undefined; t: Title; p: ProgressRecord } => Boolean(x.t)),
     [progress, library, titles],
   );
+  const downloaded = useMemo(
+    () =>
+      [...downloads.titles.values()]
+        .map((d) => ({ r: library.get(d.titleKey), t: titles.get(d.titleKey) ?? dlTitles.get(d.titleKey), p: progress.get(d.titleKey), note: `${d.chapters} ${d.chapters === 1 ? "chapter" : "chapters"} saved` }))
+        .filter((x): x is { r: LibraryRecord | undefined; t: Title; p: ProgressRecord | undefined; note: string } => Boolean(x.t)),
+    [downloads.titles, library, titles, dlTitles, progress],
+  );
   const rows = useMemo(() => {
     const f = find.trim().toLowerCase();
-    const base: { r?: LibraryRecord; t: Title; p?: ProgressRecord }[] =
+    const base: { r?: LibraryRecord; t: Title; p?: ProgressRecord; note?: string }[] =
       tab === "recent"
         ? recent
-        : recs
+        : tab === "downloaded"
+          ? downloaded
+          : recs
             .filter(match)
             .map((r) => ({ r, t: titles.get(r.titleKey), p: progress.get(r.titleKey) }))
             .filter((x): x is { r: LibraryRecord; t: Title; p: ProgressRecord | undefined } => Boolean(x.t));
     const xs = base
       .filter((x) => scope === "all" || unread(x.t, x.p))
       .filter((x) => !f || x.t.title.toLowerCase().includes(f) || x.t.meta?.altTitles?.some((a) => a.toLowerCase().includes(f)));
-    if (tab !== "recent") xs.sort((a, b) => (sort === "title" ? a.t.title.localeCompare(b.t.title) : sort === "added" ? (b.r?.addedAt ?? 0) - (a.r?.addedAt ?? 0) : sort === "progress" ? readCount(b.p) - readCount(a.p) : (b.r?.updatedAt ?? 0) - (a.r?.updatedAt ?? 0)));
+    if (tab !== "recent" && tab !== "downloaded") xs.sort((a, b) => (sort === "title" ? a.t.title.localeCompare(b.t.title) : sort === "added" ? (b.r?.addedAt ?? 0) - (a.r?.addedAt ?? 0) : sort === "progress" ? readCount(b.p) - readCount(a.p) : (b.r?.updatedAt ?? 0) - (a.r?.updatedAt ?? 0)));
     return xs;
-  }, [recs, recent, tab, sort, titles, progress, find, scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [recs, recent, downloaded, tab, sort, titles, progress, find, scope]); // eslint-disable-line react-hooks/exhaustive-deps
   // totals for the blueprint's "N SERIES TOTAL | N UNREAD SERIES" switch, for the current list
   const totals = useMemo(() => {
-    const list = tab === "recent" ? recent : recs.filter(match).map((r) => ({ t: titles.get(r.titleKey), p: progress.get(r.titleKey) }));
+    const list = tab === "recent" ? recent : tab === "downloaded" ? downloaded : recs.filter(match).map((r) => ({ t: titles.get(r.titleKey), p: progress.get(r.titleKey) }));
     const known = list.filter((x): x is { t: Title; p: ProgressRecord | undefined } => Boolean(x.t));
     return { all: known.length, unread: known.filter((x) => unread(x.t, x.p)).length };
-  }, [tab, recent, recs, titles, progress]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tab, recent, downloaded, recs, titles, progress]); // eslint-disable-line react-hooks/exhaustive-deps
   const count = (f: (r: LibraryRecord) => boolean) => recs.filter(f).length;
   const tabs: [Tab, string, number][] = [
     ["recent", "Recent", recent.length],
     ["all", "Saved", recs.length],
+    ...(offline ? ([["downloaded", "Downloaded", downloaded.length]] as [Tab, string, number][]) : []),
     ...(Object.keys(STATUS_LABELS) as LibraryStatus[]).map((s): [Tab, string, number] => [s, STATUS_LABELS[s], count((r) => r.status === s)]),
     ["favorites", "Favourites", count((r) => r.favorite)],
     ...collections.map((c): [Tab, string, number] => [`c:${c}`, c, count((r) => r.collections.includes(c))]),
@@ -151,13 +177,13 @@ export default function Library() {
           </button>
         </div>
       </header>
-      <div className="tabs lib-tabs" role="tablist" aria-label="My series lists">
+      <ScrollFade className="tabs lib-tabs" sticky role="tablist" label="My series lists" activeSelector='[aria-selected="true"]' activeKey={tab}>
         {tabs.map(([id, label, n]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setParams(id === "all" ? {} : { tab: id }, { replace: true })} aria-label={`${label}, ${n}`}>
             {label}
           </button>
         ))}
-      </div>
+      </ScrollFade>
       {finding && (
         <div className="lib-tools">
           <label className="lib-find">
@@ -171,6 +197,7 @@ export default function Library() {
           </label>
         </div>
       )}
+      {totals.all > 0 && (
       <div className="lib-scope" role="radiogroup" aria-label="Show">
         <RotateCw size={16} className="lib-scope-ico" aria-hidden="true" />
         {(
@@ -194,7 +221,8 @@ export default function Library() {
           </button>
         ))}
       </div>
-      {tab !== "recent" && rows.length > 0 && (
+      )}
+      {tab !== "recent" && tab !== "downloaded" && rows.length > 0 && (
         <div className="lib-sortbar">
           <span>{rows.length === 1 ? "1 series" : `${rows.length} series`}</span>
           <label className="lib-sort">
@@ -210,7 +238,7 @@ export default function Library() {
           </label>
         </div>
       )}
-      {!ready ? (
+      {!ready || (tab === "downloaded" && !downloads.ready) ? (
         <ListSkeleton />
       ) : rows.length ? (
         view === "grid" ? (
@@ -218,12 +246,16 @@ export default function Library() {
         ) : (
           <ul className="lib-list">
             {rows.map((x) => (
-              <LibraryRow key={x.t.key} t={x.t} r={x.r} p={x.p} />
+              <LibraryRow key={x.t.key} t={x.t} r={x.r} p={x.p} note={x.note} />
             ))}
           </ul>
         )
       ) : find ? (
         <EmptyState center title={`No saved title matches "${find}"`} action={<button className="btn" onClick={() => setFind("")}>Clear search</button>} />
+      ) : tab === "downloaded" && scope !== "unread" ? (
+        <EmptyState center title="No downloads yet" pose="empty">
+          Save chapters from a series page to read them offline.
+        </EmptyState>
       ) : scope === "unread" ? (
         <EmptyState center title="You're all caught up" pose="done">
           No series in {tabLabel} has chapters newer than the last one you finished.

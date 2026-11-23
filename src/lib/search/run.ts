@@ -21,6 +21,8 @@ export interface IntentResult {
   downgraded: string[];
   /** Filters that could not be judged because the catalogue does not return the data they need; they were not applied. */
   unavailable: string[];
+  /** A later page failed: `items` holds what loaded before it. */
+  partial?: boolean;
 }
 
 const PAGE = 100;
@@ -68,6 +70,7 @@ export async function runIntent(i: Intent, opts: { signal?: AbortSignal; want?: 
   let scanned = 0;
   let removed = 0;
   let hasMore = true;
+  let partial = false;
   for (let page = 0; page < maxPages && out.length < want && hasMore; page++) {
     let res;
     try {
@@ -81,6 +84,11 @@ export async function runIntent(i: Intent, opts: { signal?: AbortSignal; want?: 
         q.excludedTags = q.excludedTags?.filter((x) => !unknown.includes(x));
         page--;
         continue;
+      }
+      // a later page failed: keep what loaded (a partial result), unless the search was cancelled
+      if (page > 0 && out.length && !opts.signal?.aborted) {
+        partial = true;
+        break;
       }
       throw e;
     }
@@ -123,5 +131,5 @@ export async function runIntent(i: Intent, opts: { signal?: AbortSignal; want?: 
   } else if (i.text) {
     items = out.map((t, idx) => ({ t, s: textScore(t, i.text) * 2 - idx / out.length })).sort((a, b) => b.s - a.s).map((x) => x.t);
   }
-  return { items, seed, seedMissing, scanned, removedLocally: removed, hasMore, nextOffset: offset, downgraded, unavailable: [...unavailable] };
+  return { items, seed, seedMissing, scanned, removedLocally: removed, hasMore, nextOffset: offset, downgraded, unavailable: [...unavailable], partial };
 }

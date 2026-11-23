@@ -1,0 +1,164 @@
+/*
+ * COMPASS: Search, Library and History (Spec O). Tokens only: type from the working sizes,
+ * spacing on the 4/8 grid, one 4px radius for boxes, pills only for chips.
+ */
+:root {
+  --radius: 4px;
+  --scrim-card: rgb(0 0 0 / 0.64); /* white X passes 4.5:1 over any cover art */
+}
+
+/* ---------------------------------------------------------------- scroll fade */
+.scroll-fade {
+  position: relative;
+  min-width: 0;
+}
+.scroll-fade-track {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.scroll-fade-track::-webkit-scrollbar {
+  display: none;
+}
+/* decorative only: narrow, never takes pointer events, so it can't hide a focused item */
+.scroll-fade::before,
+.scroll-fade::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 1px;
+  width: var(--space-6);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity var(--dur-fast);
+}
+.scroll-fade::before {
+  left: 0;
+  background: linear-gradient(to left, transparent, var(--bg));
+}
+.scroll-fade::after {
+  right: 0;
+  background: linear-gradient(to right, transparent, var(--bg));
+}
+.scroll-fade[data-fade-start]::before,
+.scroll-fade[data-fade-end]::after {
+  opacity: 1;
+}
+
+/* Library tabs: the wrapper is the sticky bar so the fade sticks with it */
+.scroll-fade-sticky {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--safe-top));
+  z-index: 5;
+  margin: 0 calc(var(--gutter) * -1);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.scroll-fade-sticky .lib-tabs {
+  position: static;
+  margin: 0;
+  border-bottom: 0;
+  background: none;
+}
+
+/* ---------------------------------------------------------------- search */
+.genre-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.chip.chip-genre {
+  position: relative;
+  flex: none;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+/* 44px hit area around the 36px pill */
+.chip.chip-genre::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+/* selected: green fill, black text, and a check as the non-colour cue */
+.chip.chip-genre[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+.search-results {
+  margin-top: var(--space-2);
+}
+.search-results .state .btn {
+  min-height: 48px;
+}
+
+/* category tiles: the label gets its own row above the covers, so long labels never run into the art */
+.cat-tile.cat-tile-stacked {
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: var(--radius);
+}
+.cat-tile.cat-tile-stacked .cat-tile-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.cat-tile.cat-tile-stacked .cat-stack {
+  width: 56px;
+  height: 56px;
+  bottom: var(--space-2);
+}
+
+/* ---------------------------------------------------------------- library */
+.lib-find:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.library-page .state .btn,
+.page-narrow .state .btn {
+  min-height: 48px;
+}
+
+/* touch: chips and the find field reach 44px (SHIELD_AUDIT_C2 touch targets) */
+@media (pointer: coarse) {
+  .chip {
+    min-height: 44px;
+  }
+  .chip.chip-genre {
+    min-height: 36px;
+  }
+  .lib-find {
+    min-height: 44px;
+  }
+}
+
+/* ---------------------------------------------------------------- "Not for me" on a card */
+.card-dismiss {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--scrim-card);
+  color: var(--on-art);
+}
+/* 44x44 hit area centred on the 28px circle */
+.card-dismiss::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.card-dismiss:hover {
+  background: var(--scrim);
+}
+/* the options button moves left so the two never overlap */
+.card[data-dismissible] .card-menu {
+  right: 40px;
+}
