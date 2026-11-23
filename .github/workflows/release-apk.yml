@@ -1,6 +1,7 @@
 name: Release Android APK
 
-# Builds the Capacitor Android app and attaches the APK to a GitHub Release.
+# Builds the Capacitor Android app. The APK is attached to the GitHub Release only
+# when release signing secrets exist; otherwise it is kept as a workflow artifact.
 # Trigger: push a tag like v0.3.0, or run manually with a tag name.
 on:
   push:
@@ -82,17 +83,27 @@ jobs:
             cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/dawghwa.apk"
           fi
           (cd "$RUNNER_TEMP" && sha256sum dawghwa.apk > dawghwa.apk.sha256)
-      - name: Publish release
+      - name: Keep unsigned build as a workflow artifact
+        if: steps.ks.outputs.signed != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dawghwa-${{ env.TAG }}-debug-apk
+          path: |
+            ${{ runner.temp }}/dawghwa.apk
+            ${{ runner.temp }}/dawghwa.apk.sha256
+          retention-days: 14
+      - name: Attach signed APK to the release
+        # Only signed builds are attached (docs/RELEASE.md). Without the signing
+        # secrets the release notes say "Android build pending signing keys".
+        if: steps.ks.outputs.signed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           NOTE="Android APK for Dawghwa ${TAG}. Install by allowing installs from your browser, then open dawghwa.apk."
-          if [ "${{ steps.ks.outputs.signed }}" != "1" ]; then
-            NOTE="$NOTE This build is debug-signed with a per-build key, so Android will refuse to update over an older Dawghwa APK. Before installing a new version, export your profiles (Profile > Export), uninstall the old app, install this one, then import them."
-          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$RUNNER_TEMP/dawghwa.apk" "$RUNNER_TEMP/dawghwa.apk.sha256" --clobber
           else
+            case "$TAG" in *-*) KIND="--prerelease" ;; *) KIND="--latest" ;; esac
             gh release create "$TAG" "$RUNNER_TEMP/dawghwa.apk" "$RUNNER_TEMP/dawghwa.apk.sha256" \
-              --target "${{ github.sha }}" --title "Dawghwa ${TAG}" --notes "$NOTE" --latest
+              --target "${{ github.sha }}" --title "Dawghwa ${TAG}" --notes "$NOTE" $KIND
           fi
