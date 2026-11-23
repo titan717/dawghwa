@@ -3448,17 +3448,22 @@ fieldset legend { padding: 0; margin-bottom: var(--space-2); }
 .ring-inner { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--text-xs); font-weight: 800; font-variant-numeric: tabular-nums; }
 
 .badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-4) var(--space-3); }
-.badge { display: grid; justify-items: center; text-align: center; gap: 4px; }
-.badge-medal { position: relative; display: grid; place-items: center; }
-.badge-ring { position: absolute; inset: 0; }
-.badge-face { width: 76%; height: 76%; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink-2); border: 2px dashed var(--line-strong); }
-.badge[data-state="earned"] .badge-face, .badge[data-state="max"] .badge-face { border-style: solid; border-color: var(--frame); }
-.badge[data-tier="1"] .badge-face { background: var(--tier-1); color: var(--bg); }
-.badge[data-tier="2"] .badge-face { background: var(--tier-2); color: var(--on-bright); }
-.badge[data-tier="3"] .badge-face { background: var(--tier-3); color: var(--on-bright); }
-.badge[data-state="max"] .badge-face { width: 100%; height: 100%; }
-.badge-tier { position: absolute; right: -2px; bottom: -2px; min-width: 24px; height: 22px; padding: 0 5px; border-radius: 11px; display: grid; place-items: center; font-size: 11px; font-weight: 850; background: var(--ink); color: var(--bg); border: 2px solid var(--bg); }
-.badge-name { font-weight: 800; font-size: var(--text-sm); line-height: 1.2; }
+/* Badges: one shield for every badge (Spec L). Locked = muted silhouette + visible "Locked" text. */
+.badge { display: grid; justify-items: center; text-align: center; gap: 4px; --badge-fill: var(--surface-2); --badge-on: var(--ink-3); }
+.badge-shield { position: relative; display: grid; place-items: center; }
+.badge-shield > svg { position: absolute; inset: 0; display: block; overflow: visible; }
+.badge-fill { fill: var(--badge-fill); }
+.badge-track { fill: none; stroke: var(--control-line, #7a7a7a); stroke-width: 1.5; }
+.badge-progress { fill: none; stroke: var(--accent-text); stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray var(--dur-ring) var(--ease-out); }
+.badge-face { position: relative; display: grid; place-items: center; color: var(--badge-on); margin-bottom: 6%; }
+.badge[data-tier="1"] { --badge-fill: var(--tier-1); --badge-on: #000; }
+.badge[data-tier="2"] { --badge-fill: var(--tier-2); --badge-on: #000; }
+.badge[data-tier="3"] { --badge-fill: var(--tier-3); --badge-on: #000; }
+[data-theme="light"] .badge[data-tier="1"] { --badge-on: #fff; }
+.badge[data-state="earned"] .badge-track { stroke: color-mix(in srgb, var(--badge-on) 35%, transparent); }
+.badge-tier { position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); min-width: 26px; height: 20px; padding: 0 6px; border-radius: 4px; display: grid; place-items: center; font-size: var(--text-2xs); font-weight: 800; background: var(--badge-fill); color: var(--badge-on); border: 2px solid var(--bg); }
+.badge-name { font-weight: 800; font-size: var(--text-sm); line-height: 1.2; margin-top: 4px; }
+.badge-state { font-size: var(--text-xs); font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .badge-hint { color: var(--ink-2); font-size: var(--text-xs); line-height: 1.3; }
 .ach-head { padding-top: var(--space-4); margin-bottom: var(--space-6); }
 .ach-head h1, .page-title { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 1.05; margin: 4px 0 6px; letter-spacing: -0.01em; }
@@ -3537,17 +3542,18 @@ fieldset legend { padding: 0; margin-bottom: var(--space-2); }
   .quest-go { flex-basis: 100%; justify-content: center; }
 }
 
-.quest-strip { margin: var(--space-4) 0 var(--space-6); }
-.quest-strip-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 44px; }
-.quest-strip-head h2 { margin: 0; font-size: var(--text-lg); font-weight: 850; }
-.quest-strip-head .muted { display: inline-flex; align-items: center; gap: 2px; font-size: var(--text-sm); }
-.quest-strip ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.quest-strip li a { display: flex; align-items: center; gap: 10px; min-height: 56px; height: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface); }
-.quest-strip li[data-done] a { border-color: var(--reward-quest); }
-.quest-strip li a > span:last-child { display: grid; min-width: 0; font-size: var(--text-sm); line-height: 1.25; }
-.quest-strip b { font-weight: 800; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.quest-strip .muted { font-size: var(--text-xs); }
-@media (max-width: 719px) { .quest-strip ul { grid-template-columns: 1fr; } }
+/* Home: one weekly quest card (Spec L). Secondary action only; the hero owns the green fill. */
+.quest-home { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 var(--space-6); padding: 16px; border-radius: 4px; background: var(--surface); max-width: 720px; }
+.quest-home .ring-inner { font-size: var(--text-2xs); }
+.quest-home-body { flex: 1; min-width: 0; display: grid; }
+.quest-home-kicker { margin: 0; font-size: var(--text-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.quest-home h2 { margin: 2px 0 0; font-size: var(--text-base); font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.quest-home-detail { margin: 2px 0 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quest-home-xp { font-weight: 700; color: var(--reward-quest-text); white-space: nowrap; }
+.quest-home-all { display: inline-flex; align-items: center; gap: 2px; align-self: start; min-height: 44px; margin: -8px 0 -14px; font-size: var(--text-xs); font-weight: 650; color: var(--ink-2); }
+.quest-home-all:hover { color: var(--ink); }
+.quest-home-go { flex: none; min-height: 44px; }
+@media (max-width: 479px) { .quest-home { padding: 12px; gap: 10px; } .quest-home-go { padding: 0 12px; } }
 
 .rhythm .segmented { margin-bottom: var(--space-3); }
 .rhythm-week { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: var(--text-xs); color: var(--ink-2); }
