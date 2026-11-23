@@ -1,0 +1,24 @@
+# Cold start and active learning for a tiny on-device recommender
+
+Owner: ORACLE. Cycle 0, 2026-11-23. Time-boxed desk research; summaries are in my own words. All links accessed 2026-11-23.
+
+## Question
+
+Which cards should the taste quiz (Spec D) show, and how should the answers feed the existing on-device learner (`src/lib/intel/learner.ts`, online logistic regression plus taste vectors over hashed metadata features), given: no server, no other users' data on the device, about 1,000 catalogue titles, 10 to 15 swipes, and a phone CPU?
+
+## Findings
+
+1. Item choice matters more than the model at cold start. The GroupLens "Getting to know you" study compared six strategies for picking items to show new users and found the choice changed both user effort and the quality of the first recommendations ([Rashid et al., IUI 2002, UMN record](https://experts.umn.edu/en/publications/getting-to-know-you-learning-new-user-preferences-in-recommender-/)). Its lasting lesson, cited when it won the IUI 2020 most-impactful-paper award, is to balance popularity (the person probably has an opinion) with entropy (opinions on the item differ, so the answer tells you something) ([UMN CS&E news](https://cse.umn.edu/cs/news/grouplens-paper-new-users-selected-acm-iui-2020-most-impactful-paper)).
+2. Pure popularity is the weakest informative strategy; information-theoretic measures that are popularity-aware did best in the follow-up work ([Rashid, Karypis, Riedl, SIGKDD Explorations 2008](https://www.kdd.org/exploration_files/WebKDD08-Al-Rashid.pdf)). Popular items get answered but say little because most people like them ([Scientific Reports 2025, active learning for user cold start](https://link.springer.com/article/10.1038/s41598-025-09708-2)).
+3. Pure uncertainty sampling performs poorly at true cold start, because with no data the uncertainty estimates are flat and selection becomes biased with poor coverage ([Emergent Mind topic summary, cold-start active preference learning](https://www.emergentmind.com/topics/cold-start-active-preference-learning)). Coverage (show new genres) has to be an explicit term, not something uncertainty discovers.
+4. Bandit framing: Thompson sampling keeps a posterior per arm and samples from it, which balances exploring unknown preferences with showing likely hits, and is a common choice for cold-start users ([Conversational Thompson Sampling, ACM TOIS](https://dl.acm.org/doi/fullHtml/10.1145/3446427)). For a 12-card quiz a Beta posterior per genre is enough: it costs a few numbers and its variance is a closed-form uncertainty.
+5. Attribute-level questions transfer: modelling attributes (genres) and items in one space lets a few answers about items update beliefs about many other items ([ConTS, same source](https://dl.acm.org/doi/fullHtml/10.1145/3446427)). Our learner already does this through hashed genre, theme, kind and creator features, so quiz answers on titles generalise without a new model.
+6. Questionnaire evaluation: offline, simulate a new user answering the questionnaire and measure how good the resulting recommendations are against items the user is known to like ([Greedy SLIM questionnaire paper, arXiv 2406.06061](https://arxiv.org/pdf/2406.06061)). This is the "swipes to quality" curve the master prompt asks for.
+7. Heavy approaches (meta-learning such as MeLU, deep cold-start models, decision-tree interviews trained on many users) need a population of other users' ratings, which Dawghwa does not have on device and must not collect. Out of scope.
+
+## Recommendation
+
+- Card selection (`nextCard`): score = uncertainty of the card's genres under a per-genre Beta posterior (finding 4) + genre coverage bonus (finding 3) + a familiarity prior from log follows, capped so it never dominates (findings 1 and 2) + penalty for a third card of the same format in a row + tiny seeded jitter. Pool = titles with metadata and a cover, not mature, not hidden, not already in the library or rejected, limited to the top 300 by follows so most cards are recognisable.
+- Learning: quiz answers go through the existing `signal()` as explicit events (`quiz_love`, `quiz_like`), trained like strong explicit priors; "not for me" reuses the existing not-interested hide; "skip" is logged for rewards only and never trained on (consistent with `signals.ts`: skipping is not a dislike).
+- No new dependency, no new model. Evaluate with a simulated-quiz replay on the fixture catalogue: NDCG@10 after n swipes, and swipes needed to reach 80% and 90% of the 20-swipe NDCG@10, against random and popularity card orders.
+- Unverified: the right weights for quiz events relative to reading events. The replay checks them on synthetic personas only; real-profile replay (sources A and B in docs/RECOMMENDER_EVAL.md) is needed before calling them tuned.
