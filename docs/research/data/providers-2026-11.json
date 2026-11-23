@@ -1,0 +1,1847 @@
+[
+ {
+  "name": "One Piece",
+  "kind": "manga, long-running shonen",
+  "ref": "mangadex:a1c7c817-4e59-43b7-9365-09675a149a6f",
+  "code": 200,
+  "providers": {
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "One Piece",
+    "latest": 1199,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 1205,
+    "chTotal": null,
+    "maxCh": 1199,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "One Piece",
+    "latest": 1198,
+    "cands": [
+     [
+      "One Piece (Official Colored)",
+      1,
+      "exact"
+     ],
+     [
+      "One Piece Party",
+      0.713,
+      "possible"
+     ],
+     [
+      "One Piece Omake",
+      0.713,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 1,
+    "chTotal": null,
+    "maxCh": 1191,
+    "langs": [
+     "en"
+    ]
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": [
+     [
+      "One Piece: Destiny",
+      0.667,
+      "possible"
+     ],
+     [
+      "One Piece: Destiny",
+      0.667,
+      "possible"
+     ]
+    ]
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "One Piece",
+   "queries": [
+    "One Piece",
+    "\u0110\u1ea3o H\u1ea3i T\u1eb7c"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangakatana",
+    "mangadex"
+   ],
+   "durationMs": 2909
+  }
+ },
+ {
+  "name": "Berserk",
+  "kind": "manga, long-running seinen",
+  "ref": "mangadex:801513ba-a712-498c-8f57-cae55b38cc92",
+  "code": 200,
+  "providers": {
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Berserk",
+    "latest": 386,
+    "cands": [
+     [
+      "Berserk - Cruel (Doujinshi)",
+      0.637,
+      "possible"
+     ],
+     [
+      "Berserk Gaiden",
+      0.611,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 425,
+    "chTotal": null,
+    "maxCh": 386,
+    "langs": [
+     "en"
+    ]
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Berserk",
+    "latest": 386,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 403,
+    "chTotal": null,
+    "maxCh": 386,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Berserk",
+   "queries": [
+    "Berserk"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangadex",
+    "mangakatana"
+   ],
+   "durationMs": 2022
+  }
+ },
+ {
+  "name": "Kagurabachi",
+  "kind": "manga, new shonen",
+  "ref": "mangadex:d65c0332-3764-4c89-84bd-b1a4e7278ad7",
+  "code": 200,
+  "providers": {
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Kagurabachi",
+    "latest": 139,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 0,
+    "chTotal": null
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Kagurabachi",
+    "latest": 139,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 142,
+    "chTotal": null,
+    "maxCh": 139,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Kagurabachi",
+   "queries": [
+    "Kagurabachi",
+    "Kagura-bachi"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangadex",
+    "mangakatana"
+   ],
+   "durationMs": 37
+  }
+ },
+ {
+  "name": "Dandadan",
+  "kind": "manga, recent shonen",
+  "ref": "mangadex:68112dc1-2b80-4f20-beb8-2f2a8716a430",
+  "code": 200,
+  "providers": {
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Dandadan",
+    "latest": 253,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 0,
+    "chTotal": null
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Dandadan",
+    "latest": 253,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 255,
+    "chTotal": null,
+    "maxCh": 253,
+    "langs": [
+     "?"
+    ]
+   },
+   "webtoon": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Dandadan",
+    "latest": 3,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 1,
+    "chTotal": null,
+    "maxCh": 3,
+    "langs": [
+     "en"
+    ]
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Dandadan",
+   "queries": [
+    "Dandadan",
+    "DAN DA DAN"
+   ],
+   "totalSources": 8,
+   "availableSources": 3,
+   "noMatchSources": 2,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangadex",
+    "mangakatana",
+    "webtoon"
+   ],
+   "durationMs": 2061
+  }
+ },
+ {
+  "name": "Solo Leveling",
+  "kind": "manhwa, completed action",
+  "ref": "mangadex:32d76d19-8a05-4db0-9fc2-e0b0648fe9d0",
+  "code": 200,
+  "providers": {
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Solo Leveling",
+    "latest": 200,
+    "cands": [
+     [
+      "Solo Leveling: Arise",
+      0.765,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 0,
+    "chTotal": null
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Solo Leveling",
+    "latest": 200,
+    "cands": [
+     [
+      "Solo Leveling: Ragnarok",
+      0.711,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 202,
+    "chTotal": null,
+    "maxCh": 200,
+    "langs": [
+     "?"
+    ]
+   },
+   "asurascan": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Solo Leveling",
+    "latest": 0,
+    "cands": [
+     [
+      "Solo Leveling: Ragnarok",
+      0.711,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 201,
+    "chTotal": null,
+    "maxCh": 200,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": [
+     [
+      "Solo Leveling: Ragnarok",
+      0.711,
+      "possible"
+     ]
+    ]
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Solo Leveling",
+   "queries": [
+    "Solo Leveling",
+    "Na Honjaman Level-Up"
+   ],
+   "totalSources": 8,
+   "availableSources": 3,
+   "noMatchSources": 2,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangadex",
+    "mangakatana",
+    "asurascan"
+   ],
+   "durationMs": 14
+  }
+ },
+ {
+  "name": "Omniscient Reader's Viewpoint",
+  "kind": "manhwa, ongoing webtoon",
+  "ref": "mangadex:9a414441-bbad-43f1-a3a7-dc262ca790a3",
+  "code": 200,
+  "providers": {
+   "manhuaplus": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Omniscient Reader's Viewpoint",
+    "latest": 311,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 313,
+    "chTotal": null,
+    "maxCh": 311,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Omniscient Reader's Viewpoint",
+    "latest": 262,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 4,
+    "chTotal": null,
+    "maxCh": 262,
+    "langs": [
+     "en"
+    ]
+   },
+   "asurascan": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Omniscient Reader\u2019s Viewpoint",
+    "latest": 0,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 312,
+    "chTotal": null,
+    "maxCh": 311,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Omniscient Reader's Viewpoint",
+   "queries": [
+    "Omniscient Reader's Viewpoint",
+    "Jeonjijeok Dokja Sijeom"
+   ],
+   "totalSources": 8,
+   "availableSources": 3,
+   "noMatchSources": 2,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "manhuaplus",
+    "mangadex",
+    "asurascan"
+   ],
+   "durationMs": 1973
+  }
+ },
+ {
+  "name": "The Greatest Estate Developer",
+  "kind": "manhwa, webtoon-style comedy",
+  "ref": "mangadex:d7f56ace-cd30-48b9-8b64-afeca0077fca",
+  "code": 200,
+  "providers": {
+   "manhuaplus": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "The Greatest Estate Developer",
+    "latest": 223,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 226,
+    "chTotal": null,
+    "maxCh": 223,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "The Greatest Estate Developer",
+    "latest": 222.5,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 3,
+    "chTotal": null,
+    "maxCh": 223.9,
+    "langs": [
+     "en"
+    ]
+   },
+   "webtoon": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "The Greatest Estate Developer",
+    "latest": 7,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 7,
+    "chTotal": null,
+    "maxCh": 7,
+    "langs": [
+     "en"
+    ]
+   },
+   "asurascan": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "The Greatest Estate Developer",
+    "latest": 0,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 223,
+    "chTotal": null,
+    "maxCh": 223,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "The Greatest Estate Developer",
+   "queries": [
+    "The Greatest Estate Developer",
+    "Yeokdaegeum Yeongji Seolgyesa"
+   ],
+   "totalSources": 8,
+   "availableSources": 4,
+   "noMatchSources": 1,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "manhuaplus",
+    "mangadex",
+    "webtoon",
+    "asurascan"
+   ],
+   "durationMs": 2605
+  }
+ },
+ {
+  "name": "Tower of God",
+  "kind": "manhwa, webtoon-style long-running",
+  "ref": "mangadex:c0ee660b-f9f2-45c3-8068-5123ff53f84a",
+  "code": 200,
+  "providers": {
+   "webtoon": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Tower of God",
+    "latest": 653,
+    "cands": [
+     [
+      "Tower Of God (No Mans Tower)",
+      1,
+      "exact"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 652,
+    "chTotal": null,
+    "maxCh": 653,
+    "langs": [
+     "en"
+    ]
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Tower of God",
+    "latest": 652,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 653,
+    "chTotal": null,
+    "maxCh": 652,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Tower of God",
+    "latest": 0,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 0,
+    "chTotal": null
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Tower of God",
+   "queries": [
+    "Tower of God",
+    "Sinui Tap"
+   ],
+   "totalSources": 8,
+   "availableSources": 3,
+   "noMatchSources": 2,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "webtoon",
+    "mangakatana",
+    "mangadex"
+   ],
+   "durationMs": 2878
+  }
+ },
+ {
+  "name": "Tales of Demons and Gods",
+  "kind": "manhua, long-running cultivation",
+  "ref": "mangadex:812f9696-048f-496d-9ed4-84c99345d1fb",
+  "code": 200,
+  "providers": {
+   "manhuaplus": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Tales Of Demons And Gods",
+    "latest": 539.6,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 521,
+    "chTotal": null,
+    "maxCh": 539.6,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Tales of Demons and Gods",
+    "latest": 468,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 570,
+    "chTotal": null,
+    "maxCh": 468,
+    "langs": [
+     "en"
+    ]
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Tales of Demons and Gods",
+   "queries": [
+    "Tales of Demons and Gods",
+    "Y\u0101o Sh\u00e9n J\u00ec"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "manhuaplus",
+    "mangadex"
+   ],
+   "durationMs": 3877
+  }
+ },
+ {
+  "name": "Martial Peak",
+  "kind": "manhua, very long-running cultivation",
+  "ref": "mangadex:b1461071-bfbb-43e7-a5b6-a7ba5904649f",
+  "code": 200,
+  "providers": {
+   "manhuaplus": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Martial Peak",
+    "latest": 3862,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 3363,
+    "chTotal": null,
+    "maxCh": 3862,
+    "langs": [
+     "?"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Martial Peak",
+    "latest": 3844,
+    "cands": [
+     [
+      "Peak Of Martial Art",
+      0.702,
+      "possible"
+     ]
+    ],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 3918,
+    "chTotal": null,
+    "maxCh": 3844,
+    "langs": [
+     "en"
+    ]
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Martial Peak",
+   "queries": [
+    "Martial Peak",
+    "W\u01d4 Li\u00e0n Di\u0101nf\u0113ng"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "manhuaplus",
+    "mangadex"
+   ],
+   "durationMs": 4431
+  }
+ },
+ {
+  "name": "Absolute Reign",
+  "kind": "obscure (low-chapter-count MangaDex entry)",
+  "ref": "mangadex:1de0715a-ba15-4250-8eb9-0149be0ac76e",
+  "code": 200,
+  "providers": {
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Absolute Dominion",
+    "latest": 117,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 118,
+    "chTotal": null,
+    "maxCh": 117,
+    "langs": [
+     "?"
+    ]
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Absolute Dominion",
+    "latest": 115,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 117,
+    "chTotal": null,
+    "maxCh": 115,
+    "langs": [
+     "?"
+    ]
+   },
+   "webtoon": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Absolute Reign",
+    "latest": 100,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 100,
+    "chTotal": null,
+    "maxCh": 100,
+    "langs": [
+     "en"
+    ]
+   },
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Absolute Reign",
+    "latest": 41,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 42,
+    "chTotal": null,
+    "maxCh": 41,
+    "langs": [
+     "en"
+    ]
+   },
+   "asurascan": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Absolute Domination",
+    "latest": 0,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 100,
+    "chTotal": null,
+    "maxCh": 99,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "blocked",
+    "available": false,
+    "error": "UPSTREAM_BLOCKED",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Absolute Reign",
+   "queries": [
+    "Absolute Reign",
+    "Jeoldae Gunrim"
+   ],
+   "totalSources": 8,
+   "availableSources": 5,
+   "noMatchSources": 0,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangakatana",
+    "manhuaplus",
+    "webtoon",
+    "mangadex",
+    "asurascan"
+   ],
+   "durationMs": 2263
+  }
+ },
+ {
+  "name": "Zui Wu Dao",
+  "kind": "obscure manhua",
+  "ref": "mangadex:a1e27101-85c9-45c9-ac40-a3707cb8443a",
+  "code": 200,
+  "providers": {
+   "mangadex": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Zui Wu Dao",
+    "latest": 54,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 54,
+    "chTotal": null,
+    "maxCh": 54,
+    "langs": [
+     "en"
+    ]
+   },
+   "mangakatana": {
+    "state": "working",
+    "available": true,
+    "error": null,
+    "match": "exact",
+    "score": 1,
+    "matchTitle": "Zui Wu Dao",
+    "latest": 0,
+    "cands": [],
+    "chKeys": [
+     "title",
+     "source",
+     "sourceId",
+     "match",
+     "chapters",
+     "totalChapters",
+     "meta"
+    ],
+    "chapters": 54,
+    "chTotal": null,
+    "maxCh": 54,
+    "langs": [
+     "?"
+    ]
+   },
+   "weebcentral": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "flamecomics": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "comix": {
+    "state": "failing",
+    "available": false,
+    "error": "SOURCE_CIRCUIT_OPEN",
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "manhuaplus": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "asurascan": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   },
+   "webtoon": {
+    "state": "working",
+    "available": false,
+    "error": null,
+    "match": null,
+    "score": null,
+    "matchTitle": null,
+    "latest": null,
+    "cands": []
+   }
+  },
+  "skipped": [],
+  "summary": {
+   "done": true,
+   "title": "Zui Wu Dao",
+   "queries": [
+    "Zui Wu Dao",
+    "Peak of Martial Arts"
+   ],
+   "totalSources": 8,
+   "availableSources": 2,
+   "noMatchSources": 3,
+   "failedSources": 3,
+   "skippedSources": 0,
+   "ranking": [
+    "mangadex",
+    "mangakatana"
+   ],
+   "durationMs": 4283
+  }
+ }
+]
