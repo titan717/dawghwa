@@ -51,6 +51,10 @@ These came up while checking the backlog against [DECISIONS.md](DECISIONS.md) an
 | X3 | Desktop sticky header, no sidebar | D6 says the desktop sidebar holds Search and Profile | FORGE |
 | X4 | Comments are out of scope | D5, D24, D25 shipped local, private per-chapter comments and a comment quest (D19 `since` 23 Nov 2026) | Lead (keep as private notes, or hide) |
 
+## Cycle 0 update (23 Nov 2026)
+
+The master prompt now puts offline chapters (Spec G, `FEATURE_OFFLINE`) and public comments and profiles (Spec J, `FEATURE_COMMENTS`, `FEATURE_ACCOUNTS`) in scope. The "Offline downloads" and "Public comments and reviews" rows in the out-of-scope table below are superseded, and B11's "drop downloaded" note no longer holds (COMPASS adds a Downloaded filter). New items B32 to B46 (reader tap zones, offline flow, share points, comments, profiles, quiz measurement) are ranked in [research/competitors.md](research/competitors.md#top-15-picks-for-dawghwa), and the metrics they are judged by are in [METRICS.md](METRICS.md).
+
 ## Backlog
 
 Value and effort are LENS estimates. Value: H changes a core loop, M clearly helps, L nice to have. Effort: S under a day, M a few days, L a week or more. "Fit" checks the row against the fixed decisions above.
