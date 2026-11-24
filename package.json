@@ -1,7 +1,7 @@
 {
   "name": "dawghwa",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Dawghwa: personalised manga, manhwa, manhua and webtoon discovery and reading app (PWA + Android)",
   "license": "MIT",
