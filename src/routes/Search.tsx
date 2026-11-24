@@ -3,11 +3,13 @@ import { useOnline } from "@/lib/platform/useOnline";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Clock, Compass, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Compass, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import "@/styles/search-library.css";
 import { Sheet } from "@/components/Layer";
 import type { BrowseOrder, BrowseQuery, MangaKind } from "@/lib/api/types";
 import { TitleCard } from "@/components/TitleCard";
 import { TitleGrid } from "@/components/Grid";
+import { ScrollFade } from "@/components/ScrollFade";
 import { EmptyState, GridSkeleton, ListSkeleton, RowSkeleton } from "@/components/States";
 import { PartialNote, ResultsError } from "@/components/DiscoveryStates";
 import { Cover } from "@/components/Cover";
@@ -16,6 +18,7 @@ import { runIntent } from "@/lib/search/run";
 import { textScore } from "@/lib/search/local";
 import { streamSearch } from "@/lib/api/endpoints";
 import { useBrowse, useVocabulary } from "@/lib/query";
+import { searchView, statusLine, type SearchView } from "@/lib/search/state";
 import { useHead } from "@/lib/seo";
 import { getCachedTitles } from "@/lib/store/db";
 import { useUser } from "@/lib/store/user";
@@ -186,14 +189,34 @@ const CATEGORIES: { label: string; to: string; q: BrowseQuery }[] = [
   { label: "Romance", to: "/discover?tag=Romance", q: { includedTags: ["Romance"], order: "popular" } },
 ];
 
-/** Category tile: the label plus the cover of that category's current top series (a real browse result). */
-function CategoryTile({ label, to, q }: { label: string; to: string; q: BrowseQuery }) {
-  const r = useBrowse({ ...q, limit: 3 });
-  const covers = (r.data?.items ?? []).filter((t) => t.cover && !isMature(t)).slice(0, 3);
+/**
+ * All category tiles. Each tile's art comes from its own top results, but a series already
+ * shown on an earlier tile is skipped, so no two tiles repeat a cover (DESIGN_REVIEW_C2 #19).
+ */
+function CategoryTiles() {
+  // CATEGORIES is a constant, so this is a fixed number of hook calls
+  const results = CATEGORIES.map((c) => useBrowse({ ...c.q, limit: 8 })); // eslint-disable-line react-hooks/rules-of-hooks
+  const used = new Set<string>();
+  const covers = results.map((r) => {
+    const pick = (r.data?.items ?? []).filter((t) => t.cover && !isMature(t) && !used.has(t.key)).slice(0, 3);
+    pick.forEach((t) => used.add(t.key));
+    return pick;
+  });
+  return (
+    <ul className="cat-tiles">
+      {CATEGORIES.map((c, i) => (
+        <CategoryTile key={c.label} label={c.label} to={c.to} covers={covers[i]!} />
+      ))}
+    </ul>
+  );
+}
+
+/** Category tile: the label on its own row, plus covers of that category's current top series (real browse results). */
+function CategoryTile({ label, to, covers }: { label: string; to: string; covers: Title[] }) {
   // blueprint: the top cover sits in front of two others, stacked to the bottom right
   return (
     <li>
-      <Link className="cat-tile" to={to}>
+      <Link className="cat-tile cat-tile-stacked" to={to}>
         <span className="cat-tile-label">{label}</span>
         <span className="cat-stack" aria-hidden="true">
           {covers.length ? (
@@ -256,6 +279,10 @@ export default function Search() {
   useHead({ title: q ? `Search: ${q}` : "Search", path: "/search", noindex: true });
 
   useEffect(() => setRecent(readRecent(profileId)), [profileId]);
+  // focus the field only with a fine pointer: on phones autofocus pops the keyboard before the user asks (DESIGN_REVIEW_C2 #14)
+  useEffect(() => {
+    if (typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches) input.current?.focus({ preventScroll: true });
+  }, []);
   useEffect(() => {
     const p = new URLSearchParams(params);
     if (q) p.set("q", q);
@@ -321,6 +348,43 @@ export default function Search() {
     return Boolean(e && (e.kind === "network" || e.kind === "offline" || e.kind === "timeout"));
   })();
   const local = intent.chips.filter((c) => c.where === "local");
+  const loadingNow = pending || active.isLoading || (structured && !intentQ.data && !intentQ.isError);
+  const view: SearchView = searchView({
+    showResults,
+    loading: loadingNow,
+    // a query paused by the browser being offline never errors: treat "offline with nothing to show" as the offline state
+    isError: active.isError || (!online && !active.data),
+    offline: !online || apiUnreachable,
+    count: pending ? 0 : items.length,
+    partial: Boolean(structured && intentQ.data?.partial),
+  });
+  const status = useDebounced(statusLine(view, items.length, Boolean(structured && intentQ.data?.hasMore)), 600);
+  const genreChips = genres.slice(0, 12);
+
+  const recentList = recent.length > 0 && (
+            <section className="section" aria-labelledby="recent-h">
+              <div className="section-head">
+                <div className="section-titles">
+                  <h2 id="recent-h">Recent searches</h2>
+                </div>
+                <button className="btn btn-sm btn-ghost" onClick={() => (localStorage.removeItem(recentKey(profileId)), setRecent([]))}>
+                  Clear all
+                </button>
+              </div>
+              <ul className="recent-list">
+                {recent.map((r) => (
+                  <li key={r}>
+                    <button className="recent-q" onClick={() => setText(r)}>
+                      <Clock size={16} aria-hidden="true" /> <span className="recent-text">{r}</span>
+                    </button>
+                    <button className="icon-btn" aria-label={`Remove "${r}" from recent searches`} onClick={() => removeRecent(r)}>
+                      <X size={16} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+  );
 
   const filters = (
     <div className="stack" style={{ gap: 20 }}>
@@ -374,6 +438,9 @@ export default function Search() {
 
   return (
     <div className="page search-page">
+      <p className="sr-only" role="status" aria-live="polite" data-testid="search-status">
+        {status}
+      </p>
       <div className="search-head">
         <h1 className="search-title">Search</h1>
         <Link className="btn btn-sm search-discover" to="/discover">
@@ -390,7 +457,7 @@ export default function Search() {
           }}
         >
           <SearchIcon size={20} aria-hidden="true" />
-          <input ref={input} autoFocus type="search" enterKeyHint="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Series, genres, themes, and more" aria-label="Search titles" autoComplete="off" spellCheck={false} />
+          <input ref={input} type="search" enterKeyHint="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Series, genres, themes, and more" aria-label="Search titles" autoComplete="off" spellCheck={false} />
           {text && (
             <button type="button" className="icon-btn" aria-label="Clear search" onClick={() => (setText(""), input.current?.focus())}>
               <X size={18} />
@@ -451,28 +518,22 @@ export default function Search() {
 
       {!showResults && (
         <div className="search-home">
-          {recent.length > 0 && (
-            <section className="section">
+          {recentList}
+          {genreChips.length > 0 && (
+            <section className="section" aria-labelledby="genre-h">
               <div className="section-head">
                 <div className="section-titles">
-                  <h2>Recent searches</h2>
+                  <h2 id="genre-h">Genres</h2>
                 </div>
-                <button className="btn btn-sm btn-ghost" onClick={() => (localStorage.removeItem(recentKey(profileId)), setRecent([]))}>
-                  Clear all
-                </button>
               </div>
-              <ul className="recent-list">
-                {recent.map((r) => (
-                  <li key={r}>
-                    <button className="recent-q" onClick={() => setText(r)}>
-                      <Clock size={16} /> <span className="recent-text">{r}</span>
-                    </button>
-                    <button className="icon-btn" aria-label={`Remove "${r}" from recent searches`} onClick={() => removeRecent(r)}>
-                      <X size={16} />
-                    </button>
-                  </li>
+              <ScrollFade className="genre-row" role="group" label="Genres">
+                {genreChips.map((g) => (
+                  <button key={g} className="chip chip-genre" aria-pressed={fTags.includes(g)} onClick={() => toggleParam("tag", g)}>
+                    {fTags.includes(g) && <Check size={14} aria-hidden="true" />}
+                    {g}
+                  </button>
                 ))}
-              </ul>
+              </ScrollFade>
             </section>
           )}
           {!trending.isError && (!trending.data || trending.data.items.length > 0) && (
@@ -503,11 +564,7 @@ export default function Search() {
                 <h2 id="cat-h">Browse Categories</h2>
               </div>
             </div>
-            <ul className="cat-tiles">
-              {CATEGORIES.map((c) => (
-                <CategoryTile key={c.label} {...c} />
-              ))}
-            </ul>
+            <CategoryTiles />
           </section>
           <section className="section">
             <div className="section-head">
@@ -528,7 +585,7 @@ export default function Search() {
       )}
 
       {showResults && (
-        <div style={{ marginTop: 8 }}>
+        <div className="search-results" aria-busy={view === "loading"}>
           {!pending && titleHits.length > 0 && (
             <section className="section title-hits" aria-labelledby="hits-h">
               <div className="section-head">
@@ -540,10 +597,10 @@ export default function Search() {
               <h2 className="hits-then">Matching your description</h2>
             </section>
           )}
-          {!(active.isError && !items.length) && (
+          {view !== "error" && view !== "offline" && (
           <div className="result-head">
-            <p className="result-count" aria-live="polite">
-              {pending ? "Searching..." : active.data ? (items.length ? `${items.length}${structured && intentQ.data?.hasMore ? "+" : ""} ${items.length === 1 ? "title" : "titles"}` : "No titles") : active.isError ? (online ? "Couldn't search" : "Offline") : online ? "Searching..." : "Offline"}
+            <p className="result-count">
+              {view === "loading" ? "Searching..." : view === "empty" ? "No titles" : `${items.length}${structured && intentQ.data?.hasMore ? "+" : ""} ${items.length === 1 ? "title" : "titles"}`}
             </p>
             <select className="select select-sm" aria-label="Sort results" value={fOrder ?? ""} onChange={(e) => setParam("order", e.target.value || undefined)}>
               {SORTS.map(([o, l]) => (
@@ -563,18 +620,21 @@ export default function Search() {
               {intentQ.data.unavailable.length ? ` Not applied, because the catalogue does not provide the data: ${intentQ.data.unavailable.join(", ")}.` : ""}
             </p>
           )}
-          {active.isError && !items.length ? (
-            <ResultsError error={active.error} retry={() => void active.refetch()} />
-          ) : pending || active.isLoading || (structured && !intentQ.data) ? (
+          {view === "error" || view === "offline" ? (
+            <>
+              <ResultsError error={active.error} offline={view === "offline"} offlineBody="Search needs a connection. Your recent searches are still here." retry={() => void active.refetch()} />
+              {view === "offline" && recentList}
+            </>
+          ) : view === "loading" ? (
             <GridSkeleton count={12} />
-          ) : !items.length ? (
-            <EmptyState title={q ? `Nothing found for "${q}"` : "Nothing matches these filters"} action={filterCount > 0 ? <button className="btn" onClick={clearFilters}>Clear filters</button> : undefined}>
-              {structured ? "Try fewer filters, or rephrase. Filters marked on device can only check titles that were fetched." : "Check the spelling, or search more widely below."}
+          ) : view === "empty" ? (
+            <EmptyState center title="No matches" action={filterCount > 0 ? <button className="btn" onClick={clearFilters}>Clear filters</button> : undefined}>
+              {filterCount > 0 || structured ? "Try fewer filters." : "Check the spelling, or try a shorter search."}
             </EmptyState>
           ) : (
             <TitleGrid items={items} context="search" highlight={structured ? undefined : q} />
           )}
-          {active.isError && items.length > 0 && <PartialNote retry={() => void active.refetch()} />}
+          {view === "partial" && <PartialNote retry={() => void active.refetch()} />}
           {!structured && q.length >= 2 && online && !apiUnreachable && !active.isError && (
             <div className="more-results">
               <MoreResults q={q} exclude={shownKeys} />
