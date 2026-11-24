@@ -1,111 +1,146 @@
-<!-- Dawghwa — built for people who love getting lost in a story. -->
-
 <div align="center">
-  <img src="assets/dawghwa-mascot.svg" width="230" alt="Dawghwa dog mascot gently floating" />
+
+  <img src="https://raw.githubusercontent.com/titan717/dawghwa/main/brand/mascot-source.png" width="250" alt="Dawghwa's dog mascot" />
+
   <h1>DAWGHWA</h1>
-  <p><strong>Find a story. Make it yours.</strong></p>
+  <p><strong>Your next favourite story is out there.</strong></p>
   <p>Manga · Manhwa · Manhua · Webtoons</p>
+
+  <p>
+    <a href="https://github.com/titan717/dawghwa">
+      <img src="https://img.shields.io/badge/status-in%20development-00f07a?style=flat-square&labelColor=171717&color=00f07a" alt="In development" />
+    </a>
+    <img src="https://img.shields.io/badge/version-0.3.0-222222?style=flat-square&labelColor=171717" alt="Version 0.3.0" />
+    <img src="https://img.shields.io/badge/platform-PWA%20%2B%20Android-222222?style=flat-square&labelColor=171717" alt="PWA and Android" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-222222?style=flat-square&labelColor=171717" alt="MIT License" /></a>
+  </p>
+
   <p>
     <a href="docs/README.md">Documentation</a>
     &nbsp;·&nbsp;
     <a href="docs/ARCHITECTURE.md">Architecture</a>
     &nbsp;·&nbsp;
-    <a href="docs/DESIGN.md">Design</a>
+    <a href="docs/DESIGN.md">Design system</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/titan717/dawghwa.api">API</a>
   </p>
+</div>
+
+<br/>
+
+<div align="center">
+  <img src="https://skillicons.dev/icons?i=react,ts,vite,capacitor,android&theme=dark" alt="React, TypeScript, Vite, Capacitor and Android" />
 </div>
 
 ---
 
-Dawghwa is an installable PWA and Android reader for discovering series, reading chapters, and keeping your place across sessions.
+## ✦ A reader, not a content warehouse
 
-## The reading loop
+Dawghwa is a personalised discovery and reading app for manga, manhwa, manhua and webtoons. Find something worth reading, settle into a chapter, and pick up where you left off.
 
-| | |
+It is built as an **installable PWA** with an **Android app** — with a reader experience designed to keep the artwork front and centre.
+
+## ◈ The good stuff
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>⌕ Discover</h3>
+      Explore catalogue sections, supported filters and natural-language discovery to find your next series.
+    </td>
+    <td width="50%" valign="top">
+      <h3>▤ Read your way</h3>
+      Choose vertical scroll, single-page, double-page or long-strip reading modes.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>♡ Your library</h3>
+      Keep your series, bookmarks, reading history, progress and profiles together on your device.
+    </td>
+    <td width="50%" valign="top">
+      <h3>✧ Personal recommendations</h3>
+      Optional recommendation learning happens locally on your device.
+    </td>
+  </tr>
+</table>
+
+## ◌ A peek inside
+
+<div align="center">
+  <img src="docs/ui-polish/phase-1/home-1440.jpg" width="100%" alt="Dawghwa home and discovery interface" />
+  <br/><sub>Find a new series.</sub>
+  <br/><br/>
+  <img src="docs/ui-polish/phase-3/reader-1440.jpg" width="100%" alt="Dawghwa chapter reader interface" />
+  <br/><sub>Then get straight to the chapter.</sub>
+</div>
+
+## ⚙ Built with
+
+<div align="center">
+  <img src="https://skillicons.dev/icons?i=react,ts,vite,capacitor,android,nodejs,git,github&theme=dark" alt="Technology stack" />
+</div>
+
+| Layer | Technology |
 |:--|:--|
-| **Discover** | Browse catalogue sections, use supported filters, or describe the kind of series you want in natural language. |
-| **Read** | Use a unified chapter list, choose an available edition, and read vertically, as single or double pages, or as a long strip. |
-| **Keep your place** | Your local library, history, progress, bookmarks, and reader profiles stay on this device. |
-| **Make it yours** | Set onboarding genres, tune reader settings, and opt into on-device recommendations and rewards. |
+| App | React 19, TypeScript, Vite |
+| Navigation | React Router |
+| Data & persistence | TanStack Query, IndexedDB |
+| Installable app | Vite PWA |
+| Android | Capacitor 8 |
+| Tests | Vitest, Testing Library, Playwright |
 
-## Made for readers
+## 🚀 Run it locally
 
-- **On-device recommendations.** Recommendation learning happens locally on your device.
-- **Private-by-default local data.** Library, history, progress, profiles, and comments are stored in IndexedDB.
-- **A reader that gets out of the way.** Reading modes and controls are designed around the chapter, not around chrome.
-- **One app, two ways to use it.** Install as a PWA or build the Android app.
+**Requirements:** Node.js 22+
 
-## Content and privacy
-
-Dawghwa does not host content or run scrapers. Catalogue, chapter, and page data come from the separate [Dawghwa API](https://github.com/titan717/dawghwa.api), which builds on [comick-source-api](https://github.com/GooglyBlox/comick-source-api) (MIT).
-
-Your library and reading data are stored locally, but browsing and reading still make network requests to the API and content providers. Local storage does not make those requests anonymous.
-
-The PWA can cache its app shell and covers. Chapter pages are not cached for offline reading. The optional four-digit PIN is a privacy curtain, not encryption.
-
-## Run locally
-
-Requires **Node.js 22+**.
-
-```sh
+```bash
+git clone https://github.com/titan717/dawghwa.git
+cd dawghwa
 npm install
 cp .env.example .env.local
-# Set DAWGHWA_API_DEV if your API is not running on :3100.
 npm run dev
 ```
 
-Run the API alongside this app in `dawghwa.api`:
+Set `DAWGHWA_API_DEV` in `.env.local` if your API is not running on port `3100`.
 
-```sh
-npm run build
-npx next start -p 3100
-```
+The API lives in the separate [dawghwa.api](https://github.com/titan717/dawghwa.api) repository. To use the deployed API with the preview server:
 
-Or point the dev/preview proxy at the deployed API:
-
-```sh
+```bash
 DAWGHWA_API_DEV=https://dawghwaapi.vercel.app npm run preview
 ```
 
-## Quality checks
+## 🧪 Checks
 
-| Command | What it checks |
-| --- | --- |
-| `npm run typecheck` | TypeScript types |
-| `npm run lint` | ESLint rules |
-| `npm test` | Unit and integration tests (Vitest, fake IndexedDB) |
-| `npm run eval:intel` | Recommendation evaluation report |
-| `npm run build && npm run e2e` | Production build and Playwright checks |
-| `npm run e2e:live` | Live reader checks; requires a running API |
+| Command | Purpose |
+|:--|:--|
+| `npm run typecheck` | TypeScript checks |
+| `npm run lint` | ESLint |
+| `npm test` | Unit and integration tests |
+| `npm run eval:intel` | Recommendation evaluation |
+| `npm run build && npm run e2e` | Production build and browser tests |
 
-## Android build
+## 🔒 A note on privacy & content
 
-```sh
-VITE_API_BASE_URL=https://your-api.example npm run android:build
-```
+- Dawghwa does **not** host content or run scrapers. Catalogue, chapter and page data are provided by the separate [Dawghwa API](https://github.com/titan717/dawghwa.api), which builds on [comick-source-api](https://github.com/GooglyBlox/comick-source-api) (MIT).
+- Your library, history, progress, profiles and comments are stored locally in IndexedDB.
+- Browsing and reading still make network requests to the API and content providers; local storage does not make those requests anonymous.
+- The PWA can cache its app shell and covers. Chapter pages are not cached for offline reading.
+- The optional four-digit PIN is a privacy curtain, not encryption.
 
-The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Android builds require JDK 21 and Android SDK platform 36. A configured HTTPS API is required unless you intentionally set `ALLOW_NO_API=1` for a UI-only smoke build.
+## 📚 Project map
 
-## API routes used
-
-| Feature | Endpoint |
-| --- | --- |
-| Catalogue, Discover, structured search | `GET /api/catalog?provider=mangadex` |
-| Filter vocabulary | `GET /api/catalog/filters?provider=mangadex` |
-| Title details | `GET /api/titles/mangadex:{id}` |
-| Multi-source title search | `POST /api/search` (NDJSON) |
-| Unified chapters and pages | `GET /api/titles/{ref}/chapters/all`, `POST /api/chapters`, `POST /api/pages` |
-| Content reports | `POST /api/reports` |
-
-The catalogue provider is MangaDex, so catalogue IDs match the reader's MangaDex IDs. Queries are translated by `src/lib/api/catalog.ts`. Filters the API cannot apply are handled on-device when possible and identified in the interface; filters requiring unavailable catalogue metadata are not guessed.
-
-## Project notes
-
-Start at the [documentation hub](docs/README.md) for product, design, research, and engineering notes.
+- [Documentation hub](docs/README.md)
+- [Architecture notes](docs/ARCHITECTURE.md)
+- [Design system](docs/DESIGN.md)
+- [API repository](https://github.com/titan717/dawghwa.api)
 
 ---
 
 <div align="center">
-  <sub>Made for the next chapter. 🐾</sub>
+  <img src="https://raw.githubusercontent.com/titan717/dawghwa/main/brand/mascot-source.png" width="92" alt="Dawghwa mascot" />
+  <p><strong>One more chapter?</strong></p>
+  <sub>Made for readers, and the stories that stay with us. 🐾</sub>
 </div>
 
 MIT licensed. Upstream credits are listed in the in-app About page.
